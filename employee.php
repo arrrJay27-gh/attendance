@@ -523,7 +523,7 @@
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="#">
+                    <a href="leave.php">
                         <i class="fa-solid fa-user-gear icon"></i>
                         <span>Leave Management</span>
                     </a>
