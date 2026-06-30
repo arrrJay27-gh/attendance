@@ -5,10 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Employee Registry - Kiwi Digital</title>
     
-    <!-- Local Bootstrap File Link -->
     <link rel="stylesheet" href="bootstrap.min.css">
 
-    <!-- Font Awesome 6 CDN Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
 
     <style>
@@ -38,7 +36,7 @@
         }
 
         /* ==========================================================================
-           SIDEBAR STYLES (MATCHED EXACTLY TO THE DASHBOARD INDEX)
+           SIDEBAR STYLES (WITH TRANSITION AND MINIMIZE CAPABILITIES)
            ========================================================================== */
         .sidebar {
             width: 280px;
@@ -49,12 +47,25 @@
             flex-direction: column;
             padding: 30px 0;
             flex-shrink: 0;
+            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+
+        /* Sidebar Header holding logo and collapse toggle button */
+        .sidebar-header {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            margin-bottom: 40px;
+            padding: 0 20px;
+            width: 100%;
         }
 
         .logo-container {
             text-align: center;
-            margin-bottom: 40px;
-            padding: 0 20px;
+            transition: opacity 0.2s ease, width 0.2s ease;
+            width: 100%;
         }
 
         .logo-img {
@@ -62,6 +73,32 @@
             height: auto;
             display: block;
             margin: 0 auto;
+        }
+
+        /* Minimize / Collapse Button Styles (<) */
+        .sidebar-toggle-btn {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            color: #555555;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            z-index: 10;
+            transition: background-color 0.2s;
+        }
+
+        .sidebar-toggle-btn:hover {
+            background-color: #f1f5f7;
         }
 
         .nav-links {
@@ -85,6 +122,7 @@
             font-size: 16px;
             font-weight: 600;
             transition: all 0.15s ease;
+            white-space: nowrap;
         }
 
         .icon {
@@ -95,6 +133,13 @@
             justify-content: center;
             align-items: center;
             color: #555555;
+            transition: margin 0.15s ease;
+        }
+
+        .nav-item a span {
+            transition: opacity 0.2s ease, width 0.2s ease;
+            opacity: 1;
+            display: inline-block;
         }
 
         /* Active shape logic */
@@ -119,6 +164,7 @@
         .sidebar-footer {
             margin-top: auto;
             padding-left: 35px;
+            transition: padding-left 0.3s ease;
         }
 
         .logout-btn {
@@ -129,6 +175,7 @@
             font-size: 13px;
             font-weight: 600;
             transition: color 0.2s ease;
+            white-space: nowrap;
         }
 
         .logout-btn:hover {
@@ -142,7 +189,60 @@
         }
 
         /* ==========================================================================
-           MAIN CONTENT CONTAINER & METRICS (MATCHED TO image_146a00.png)
+           COLLAPSED MINIMIZED STATE ASSIGNMENTS (MATCHING DASHBOARD INDEX)
+           ========================================================================== */
+        .sidebar.minimized {
+            width: 80px;
+        }
+
+        .sidebar.minimized .logo-container {
+            opacity: 0;
+            pointer-events: none;
+            width: 0;
+            overflow: hidden;
+        }
+
+        .sidebar.minimized .sidebar-toggle-btn {
+            right: 50%;
+            transform: translate(50%, -50%);
+        }
+
+        .sidebar.minimized .nav-item a {
+            padding-left: 0;
+            justify-content: center;
+        }
+
+        .sidebar.minimized .nav-item.active a {
+            margin-right: 0;
+            border-radius: 0;
+            padding-left: 0;
+        }
+
+        .sidebar.minimized .icon {
+            margin-right: 0;
+        }
+
+        .sidebar.minimized .nav-item a span,
+        .sidebar.minimized .logout-btn span {
+            opacity: 0;
+            width: 0;
+            height: 0;
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        .sidebar.minimized .sidebar-footer {
+            padding-left: 0;
+            display: flex;
+            justify-content: center;
+        }
+
+        .sidebar.minimized .logout-btn .icon {
+            margin-right: 0;
+        }
+
+        /* ==========================================================================
+           MAIN CONTENT CONTAINER & METRICS
            ========================================================================== */
         .main-content {
             flex-grow: 1;
@@ -241,7 +341,7 @@
         }
 
         /* ==========================================================================
-           EMPLOYEE PANEL & TABLE STYLES (MATCHED TO image_13f1a6.jpg)
+           EMPLOYEE PANEL & TABLE STYLES
            ========================================================================== */
         .employee-panel {
             background-color: #ffffff;
@@ -485,10 +585,14 @@
 
     <div class="app-container">
         
-        <!-- SIDEBAR COMPONENT (PERFECT STATIC MATCH) -->
-        <nav class="sidebar">
-            <div class="logo-container">
-                <img src="img/kiwi.png" alt="KIWI DIGITAL TECH INC." class="logo-img">
+        <nav class="sidebar" id="sidebarContainer">
+            <div class="sidebar-header">
+                <div class="logo-container">
+                    <img src="img/kiwi.png" alt="KIWI DIGITAL TECH INC." class="logo-img">
+                </div>
+                <button class="sidebar-toggle-btn" id="toggleSidebarBtn">
+                    <i class="fa-solid fa-chevron-left" id="toggleIcon"></i>
+                </button>
             </div>
 
             <ul class="nav-links">
@@ -550,14 +654,12 @@
             </div>
         </nav>
 
-        <!-- MAIN VIEW WRAPPER -->
         <main class="main-content">
             
             <div class="dashboard-header-bar">
                 <h1 class="dashboard-title">Employee</h1>
             </div>
             
-            <!-- METRIC CARDS OVERVIEW (MATCHED TO image_146a00.png) -->
             <div class="metrics-straight-row">
                 <div class="card">
                     <div class="card-header">
@@ -613,7 +715,6 @@
                 </div>
             </div>
             
-            <!-- REGISTRY TABLE DATA PANEL (MATCHED TO image_13f1a6.jpg) -->
             <div class="employee-panel">
                 
                 <div class="table-controls">
@@ -644,7 +745,6 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <!-- Row 1 -->
                             <tr>
                                 <td><input type="checkbox" class="custom-checkbox"></td>
                                 <td>
@@ -663,7 +763,6 @@
                                 <td>Jan 10, 2022</td>
                                 <td class="action-dot-menu"><i class="fa-solid fa-ellipsis-vertical"></i></td>
                             </tr>
-                            <!-- Row 2 -->
                             <tr>
                                 <td><input type="checkbox" class="custom-checkbox"></td>
                                 <td>
@@ -682,7 +781,6 @@
                                 <td>Mar 22, 2022</td>
                                 <td class="action-dot-menu"><i class="fa-solid fa-ellipsis-vertical"></i></td>
                             </tr>
-                            <!-- Row 3 -->
                             <tr>
                                 <td><input type="checkbox" class="custom-checkbox"></td>
                                 <td>
@@ -701,7 +799,6 @@
                                 <td>Jul 05, 2021</td>
                                 <td class="action-dot-menu"><i class="fa-solid fa-ellipsis-vertical"></i></td>
                             </tr>
-                            <!-- Row 4 -->
                             <tr>
                                 <td><input type="checkbox" class="custom-checkbox"></td>
                                 <td>
@@ -720,7 +817,6 @@
                                 <td>Feb 14, 2023</td>
                                 <td class="action-dot-menu"><i class="fa-solid fa-ellipsis-vertical"></i></td>
                             </tr>
-                            <!-- Row 5 -->
                             <tr>
                                 <td><input type="checkbox" class="custom-checkbox"></td>
                                 <td>
@@ -743,7 +839,6 @@
                     </table>
                 </div>
 
-                <!-- TABLE FOOTER & PAGINATION CONTROL -->
                 <div class="table-footer-pagination">
                     <div class="show-entries-dropdown">
                         <span>Show</span>
@@ -771,5 +866,23 @@
 
     </div>
 
+    <script>
+        const sidebar = document.getElementById('sidebarContainer');
+        const toggleBtn = document.getElementById('toggleSidebarBtn');
+        const toggleIcon = document.getElementById('toggleIcon');
+
+        toggleBtn.addEventListener('click', () => {
+            sidebar.classList.toggle('minimized');
+            
+            // Flip icons depending on expansion state
+            if (sidebar.classList.contains('minimized')) {
+                toggleIcon.classList.remove('fa-chevron-left');
+                toggleIcon.classList.add('fa-chevron-right');
+            } else {
+                toggleIcon.classList.remove('fa-chevron-right');
+                toggleIcon.classList.add('fa-chevron-left');
+            }
+        });
+    </script>
 </body>
 </html>

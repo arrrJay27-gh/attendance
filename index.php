@@ -32,9 +32,6 @@
             width: 100%;
         }
 
-        /* ==========================================================================
-           SIDEBAR STYLES (MATCHED EXACTLY TO image_06c33d.png)
-           ========================================================================== */
         .sidebar {
             width: 280px;
             height: 100%;
@@ -44,12 +41,24 @@
             flex-direction: column;
             padding: 30px 0;
             flex-shrink: 0;
+            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+
+        .sidebar-header {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            margin-bottom: 40px;
+            padding: 0 20px;
+            width: 100%;
         }
 
         .logo-container {
             text-align: center;
-            margin-bottom: 40px;
-            padding: 0 20px;
+            transition: opacity 0.2s ease, width 0.2s ease;
+            width: 100%;
         }
 
         .logo-img {
@@ -57,6 +66,32 @@
             height: auto;
             display: block;
             margin: 0 auto;
+        }
+
+        /* Sidebar Toggle minimize action button */
+        .sidebar-toggle-btn {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            color: #555555;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            z-index: 10;
+            transition: background-color 0.2s;
+        }
+
+        .sidebar-toggle-btn:hover {
+            background-color: #f1f5f7;
         }
 
         .nav-links {
@@ -80,6 +115,7 @@
             font-size: 16px;
             font-weight: 600;
             transition: all 0.15s ease;
+            white-space: nowrap;
         }
 
         .icon {
@@ -90,6 +126,13 @@
             justify-content: center;
             align-items: center;
             color: #555555;
+            transition: margin 0.15s ease;
+        }
+
+        .nav-item a span {
+            transition: opacity 0.2s ease, width 0.2s ease;
+            opacity: 1;
+            display: inline-block;
         }
 
         /* Active shape logic matching image_06c33d.png */
@@ -114,6 +157,7 @@
         .sidebar-footer {
             margin-top: auto;
             padding-left: 35px;
+            transition: padding-left 0.3s ease;
         }
 
         .logout-btn {
@@ -124,6 +168,7 @@
             font-size: 13px;
             font-weight: 600;
             transition: color 0.2s ease;
+            white-space: nowrap;
         }
 
         .logout-btn:hover {
@@ -134,6 +179,59 @@
             font-size: 20px;
             margin-right: 10px;
             color: #555555;
+        }
+
+        /* ==========================================================================
+           COLLAPSED MINIMIZED STATE ASSIGNMENTS
+           ========================================================================== */
+        .sidebar.minimized {
+            width: 80px;
+        }
+
+        .sidebar.minimized .logo-container {
+            opacity: 0;
+            pointer-events: none;
+            width: 0;
+            overflow: hidden;
+        }
+
+        .sidebar.minimized .sidebar-toggle-btn {
+            right: 50%;
+            transform: translate(50%, -50%);
+        }
+
+        .sidebar.minimized .nav-item a {
+            padding-left: 0;
+            justify-content: center;
+        }
+
+        .sidebar.minimized .nav-item.active a {
+            margin-right: 0;
+            border-radius: 0;
+            padding-left: 0;
+        }
+
+        .sidebar.minimized .icon {
+            margin-right: 0;
+        }
+
+        .sidebar.minimized .nav-item a span,
+        .sidebar.minimized .logout-btn span {
+            opacity: 0;
+            width: 0;
+            height: 0;
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        .sidebar.minimized .sidebar-footer {
+            padding-left: 0;
+            display: flex;
+            justify-content: center;
+        }
+
+        .sidebar.minimized .logout-btn .icon {
+            margin-right: 0;
         }
 
         /* ==========================================================================
@@ -370,10 +468,14 @@
 
     <div class="app-container">
         
-        <!-- SIDEBAR COMPONENT MATCHED EXACTLY TO image_06c33d.png -->
-        <nav class="sidebar">
-            <div class="logo-container">
-                <img src="img/kiwi.png" alt="KIWI DIGITAL TECH INC." class="logo-img">
+        <nav class="sidebar" id="sidebarContainer">
+            <div class="sidebar-header">
+                <div class="logo-container">
+                    <img src="img/kiwi.png" alt="KIWI DIGITAL TECH INC." class="logo-img">
+                </div>
+                <button class="sidebar-toggle-btn" id="toggleSidebarBtn">
+                    <i class="fa-solid fa-chevron-left" id="toggleIcon"></i>
+                </button>
             </div>
 
             <ul class="nav-links">
@@ -435,7 +537,6 @@
             </div>
         </nav>
 
-        <!-- MAIN VIEW WRAPPER -->
         <main class="main-content">
             
             <div class="dashboard-header-bar">
@@ -448,7 +549,6 @@
 
             <div class="dashboard-row-layout">
                 
-                <!-- METRIC CARDS OVERVIEW -->
                 <div class="metrics-straight-row">
                     <div class="card">
                         <div class="card-header">
@@ -492,7 +592,6 @@
                         </div>
                     </div>
 
-                    <!-- REAL TIME CARD -->
                     <div class="card">
                         <div class="card-header">
                             <i class="fa-solid fa-clock" style="color: #3b82f6;"></i>
@@ -505,10 +604,8 @@
                     </div>
                 </div>
 
-                <!-- BOTTOM AREA -->
                 <div class="bottom-content-area">
                     
-                    <!-- CALENDAR COMPONENT -->
                     <div class="calendar-card">
                         <div class="calendar-header">
                             <div class="calendar-month-title" id="calendar-title">June 25</div>
@@ -519,7 +616,7 @@
                         </div>
                         
                         <div class="calendar-week-strip" id="calendar-strip">
-                            <!-- Injected by JavaScript dynamically -->
+                            
                         </div>
                     </div>
                     
@@ -530,15 +627,26 @@
 
     </div>
 
-    <!-- ==========================================================================
-       JAVASCRIPT FOR RUNTIMES (CLOCK ENGINE & INDEPENDENT CALENDAR DECOUPLE)
-       ========================================================================== -->
     <script>
         document.addEventListener("DOMContentLoaded", function() {
             
-            // ==========================================
-            // REAL-TIME CLOCK ENGINE
-            // ==========================================
+            // Collapsible Sidebar Handler logic
+            const sidebar = document.getElementById('sidebarContainer');
+            const toggleBtn = document.getElementById('toggleSidebarBtn');
+            const toggleIcon = document.getElementById('toggleIcon');
+
+            toggleBtn.addEventListener('click', function() {
+                sidebar.classList.toggle('minimized');
+                
+                if (sidebar.classList.contains('minimized')) {
+                    toggleIcon.classList.remove('fa-chevron-left');
+                    toggleIcon.classList.add('fa-chevron-right');
+                } else {
+                    toggleIcon.classList.remove('fa-chevron-right');
+                    toggleIcon.classList.add('fa-chevron-left');
+                }
+            });
+
             function updateLiveTimeCard() {
                 const now = new Date();
                 let hours = now.getHours();
@@ -556,9 +664,6 @@
             setInterval(updateLiveTimeCard, 1000);
 
 
-            // ==========================================
-            // DECOUPLED TRACKING MATRIX ROUTINE
-            // ==========================================
             const realToday = new Date(2026, 5, 25); 
             let dayOffsetValue = 0; 
 

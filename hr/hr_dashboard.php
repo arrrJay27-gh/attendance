@@ -296,6 +296,34 @@
         .comparison-status-badge span { color: #94a3b8; font-weight: 400; margin-left: 2px; }
         .details-arrow-link { font-size: 12px; font-weight: 500; color: #1e293b; text-decoration: none; border: 1px solid #e2e8f0; padding: 4px 10px; border-radius: 6px; background-color: #ffffff; }
 
+        /* ==========================================================================
+           Navigation Link Cards Style (image_038ae4.png Reference)
+           ========================================================================== */
+        .navigation-links-card-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+        }
+
+        .nav-action-card-item {
+            background-color: #6e6e6e;
+            color: #ffffff;
+            font-size: 14px;
+            font-weight: 500;
+            text-align: center;
+            padding: 16px 12px;
+            border-radius: 14px;
+            text-decoration: none;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+            transition: background-color 0.2s ease, transform 0.1s ease;
+        }
+
+        .nav-action-card-item:hover {
+            background-color: #575757;
+            color: #ffffff;
+            transform: translateY(-1px);
+        }
+
         /* Analytics Split Grid Layout */
         .analytics-twins-grid {
             display: grid;
@@ -442,6 +470,7 @@
                 </div>
             </div>
 
+            <!-- Metrics Matrix Summary Block Row -->
             <div class="summary-quad-row">
                 <div class="metric-card-box">
                     <div class="card-top-meta">
@@ -511,7 +540,6 @@
                     </div>
                 </div>
             </div>
-
             <div class="analytics-twins-grid">
                 
                 <div class="analytics-card-frame">
