@@ -1,63 +1,47 @@
 <?php
-// 1. ENVIRONMENT CONFIGURATION & DISPATCH TUNING
 date_default_timezone_set('Asia/Manila');
 
-// Ensure system constants are defined for the underlying engine matrix
 if (!defined('GRACE_PERIOD_MINUTES')) {
     define('GRACE_PERIOD_MINUTES', 15);
 }
 
-// Include your core OOP tracking class component
 require_once 'class/attendance.php';
 
 $msg = "System Online. Waiting for card scan...";
 $alert_class = "info";
 
-// 2. CONTROLLER GATEWAY: Intercept hardware scanning payload
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['rfid_uid'])) {
     $rfid_uid = trim($_POST['rfid_uid']);
     $liveTimestamp = date('Y-m-d H:i:s');
     $display_time = date('h:i:s A');
 
-    // Establish local connection handler (Update with your database credentials)
+    
     $dbConnection = new mysqli("localhost", "root", "", "attendance_kiwi");
 
     if ($dbConnection->connect_error) {
         die("Connection architecture failure: " . $dbConnection->connect_error);
     }
 
-    // Instantiate class layer engine via dependency injection pattern
-    $attendanceEngine = new Attendance($dbConnection);
-
-    // Validate identity utilizing the single-factor scanning route
-    $userProfile = $attendanceEngine->verifyIdentity('single', $rfid_uid, null, false);
+    
+   $attendanceEngine = new Attendance($dbConnection);
+    
+    // 1. Query the 'employees' table instead of 'users'
+    $sql = "SELECT name FROM employees WHERE biometric_rfid = ?";
+    $stmt = $dbConnection->prepare($sql);
+    $stmt->bind_param("s", $rfid_uid);
+    $stmt->execute();
+    $userProfile = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
 
     if ($userProfile) {
-        $userId = $userProfile['id'];
-        $userRole = $userProfile['role'];
+        $fullName = $userProfile['name'];
 
-        // Pull full names cleanly to supply rich frontend feedback
-        $nameSql = "SELECT first_name, last_name FROM users WHERE id = ?";
-        $nameStmt = $dbConnection->prepare($nameSql);
-        $nameStmt->bind_param("i", $userId);
-        $nameStmt->execute();
-        $userData = $nameStmt->get_result()->fetch_assoc();
-        $fullName = $userData['first_name'] . " " . $userData['last_name'];
-        $nameStmt->close();
-
-        // Feed data structures into the contextual automated tracker matrix
-        $punchResult = $attendanceEngine->logTimePunch($userId, $userRole, $liveTimestamp);
+        // 2. Pass the retrieved name to your log function
+        $punchResult = $attendanceEngine->logTimePunch($fullName, $liveTimestamp);
 
         if ($punchResult['status'] === 'success') {
-            $action = $punchResult['action'];
+            $msg = "[{$punchResult['action']}] Successful! {$fullName} recorded at {$display_time}.";
             $alert_class = "success";
-            
-            // Generate contextual messages based on operation type flags
-            if ($action === 'Clock In' && isset($punchResult['is_late']) && $punchResult['is_late'] == 1) {
-                $msg = "[$action] Welcome, {$fullName}! Logged at {$display_time} (LATE PUNCH).";
-            } else {
-                $msg = "[$action] Successful! {$fullName} recorded at {$display_time}.";
-            }
         } else {
             $msg = "Terminal Notice: " . $punchResult['message'];
             $alert_class = "danger";
@@ -69,19 +53,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['rfid_uid'])) {
 
     $dbConnection->close();
 
-    // PRG Pattern: Redirect clears POST state to avoid duplication loop hazards on client-side F5 refresh
     header("Location: attendance_terminal.php?msg=" . urlencode($msg) . "&class=" . $alert_class);
     exit();
 }
 
-// Extract redirect parameters for interface compilation
 if (isset($_GET['msg']) && isset($_GET['class'])) {
     $msg = $_GET['msg'];
     $alert_class = $_GET['class'];
 }
 ?>
 
-<!-- 3. FRONTEND KIOSK MONITOR GRAPHICS INTERFACE -->
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -144,6 +126,21 @@ if (isset($_GET['msg']) && isset($_GET['class'])) {
 </head>
 <body>
 
+
+<!-- Inside your attendance_terminal.php form -->
+<form id="attendanceForm" action="attendance_terminal.php" method="POST">
+    <input type="text" id="rfid_uid" name="rfid_uid" autofocus autocomplete="off">
+    
+    <!-- Add a selection for manual override -->
+    <div class="mt-3">
+        <label>Action:</label>
+        <select name="action_type" class="form-select">
+            <option value="auto">Auto (Clock In/Out)</option>
+            <option value="clock_out">Manual Clock Out</option>
+        </select>
+    </div>
+</form>
+
 <div class="scanner-card">
     <div class="clock-display" id="live-clock">00:00:00 AM</div>
     <h2>TERMINAL SCANNER</h2>
@@ -153,7 +150,6 @@ if (isset($_GET['msg']) && isset($_GET['class'])) {
         <?php echo htmlspecialchars($msg); ?>
     </div>
 
-    <!-- PnP reader types card track key string and hits automatic return sequence to trigger form processing -->
     <form id="attendanceForm" action="attendance_terminal.php" method="POST">
         <input type="text" id="rfid_uid" name="rfid_uid" autofocus autocomplete="off">
     </form>
@@ -162,11 +158,10 @@ if (isset($_GET['msg']) && isset($_GET['class'])) {
 <script>
     const rfidInput = document.getElementById('rfid_uid');
 
-    // Force system selection lock onto the target scanning input element
     document.addEventListener('click', () => rfidInput.focus());
     window.onload = () => rfidInput.focus();
 
-    // Client-side timer execution script tuned for station tracking display
+
     function updateClock() {
         const now = new Date();
         let options = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true };
@@ -175,7 +170,6 @@ if (isset($_GET['msg']) && isset($_GET['class'])) {
     setInterval(updateClock, 1000);
     updateClock();
 
-    // Safely clear flash banner parameters after 4 seconds to accept fresh input queue states
     if (window.location.search.includes('msg=')) {
         setTimeout(() => {
             window.location.href = 'attendance_terminal.php';

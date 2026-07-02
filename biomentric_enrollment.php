@@ -1,201 +1,156 @@
-<?php
-// 1. SET LOCAL TIMEZONE & INITIALIZE VARIABLES
-date_default_timezone_set('Asia/Manila');
-$msg = "Select an employee and tap a card to enroll.";
-$alert_class = "info";
+<?php 
+$activePage = 'biometric'; 
+require_once 'database.php';
 
-// Establish Database Connection (OOP Style)
-$conn = new mysqli("localhost", "root", "", "attendance_kiwi");
+$database = new Database();
+$conn = $database->getConnection();
 
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
+$msg = "";
+$alert_class = "";
 
-// 2. PROCESS ENROLLMENT IF FORM IS SUBMITTED
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['rfid_uid']) && !empty($_POST['user_id'])) {
-    $rfid_uid = trim($_POST['rfid_uid']);
-    $user_id = intval($_POST['user_id']);
 
-    // Check if this RFID card is already assigned to someone else
-    $check_sql = "SELECT id, first_name, last_name FROM users WHERE biometric_rfid = ?";
-    $check_stmt = $conn->prepare($check_sql);
-    $check_stmt->bind_param("s", $rfid_uid);
-    $check_stmt->execute();
-    $check_result = $check_stmt->get_result();
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['emp_id']) && !empty($_POST['rfid_uid'])) {
 
-    if ($check_result->num_rows > 0) {
-        $existing_user = $check_result->fetch_assoc();
-        $msg = "Error: This card is already assigned to " . $existing_user['first_name'] . " " . $existing_user['last_name'] . "!";
-        $alert_class = "danger";
-    } else {
-        // Update the biometric_rfid column for the chosen user
-        $update_sql = "UPDATE users SET biometric_rfid = ? WHERE id = ?";
-        $up_stmt = $conn->prepare($update_sql);
-        $up_stmt->bind_param("si", $rfid_uid, $user_id);
+    $empId = trim($_POST['emp_id']); 
+    $rfidUid = trim($_POST['rfid_uid']);
 
-        if ($up_stmt->execute()) {
-            $msg = "Success! RFID Card registered successfully.";
-            $alert_class = "success";
-        } else {
-            $msg = "Database Error: Could not enroll card.";
-            $alert_class = "danger";
-        }
-        $up_stmt->close();
-    }
-    $check_stmt->close();
+
+    $checkQ = "SELECT employee_id, name FROM employees WHERE biometric_rfid = ?";
+    $checkStmt = $conn->prepare($checkQ);
     
-    // Redirect to clear form POST data and show the alert cleanly
-    header("Location: enrollment.php?msg=" . urlencode($msg) . "&class=" . $alert_class);
-    exit();
-}
+    if (!$checkStmt) {
+        die("<div class='alert alert-danger m-4'><strong>Database Query Error:</strong> " . $conn->error . "<br><em>Make sure you ran the ALTER TABLE command to add the 'biometric_rfid' column!</em></div>");
+    }
 
-// Capture redirect messages for the UI
-if (isset($_GET['msg']) && isset($_GET['class'])) {
-    $msg = $_GET['msg'];
-    $alert_class = $_GET['class'];
-}
+    $checkStmt->bind_param("s", $rfidUid);
+    $checkStmt->execute();
+    $res = $checkStmt->get_result()->fetch_assoc();
+    $checkStmt->close();
 
-// 3. FETCH UNENROLLED EMPLOYEES FOR THE DROPDOWN
-// This searches for users where biometric_rfid is currently NULL
-$query = "SELECT id, first_name, last_name, role FROM users WHERE biometric_rfid IS NULL";
-$unregistered_users = $conn->query($query);
+    if ($res) {
+        $msg = "Error: Card payload standard already registered to " . htmlspecialchars($res['name']);
+        $alert_class = "alert-danger";
+    } else {
+
+        $updateQ = "UPDATE employees SET biometric_rfid = ? WHERE employee_id = ?";
+        $updateStmt = $conn->prepare($updateQ);
+        
+        if (!$updateStmt) {
+            die("<div class='alert alert-danger m-4'><strong>Update Preparation Failed:</strong> " . $conn->error . "</div>");
+        }
+        
+        $updateStmt->bind_param("ss", $rfidUid, $empId);
+        
+        if ($updateStmt->execute()) {
+            if ($conn->affected_rows > 0) {
+                $msg = "Success: Card bound cleanly to employee account record.";
+                $alert_class = "alert-success";
+            } else {
+                $msg = "Warning: Query ran but no rows were updated. Check if the employee code is valid.";
+                $alert_class = "alert-warning";
+            }
+        } else {
+            $msg = "Error executing update: " . $updateStmt->error;
+            $alert_class = "alert-danger";
+        }
+        $updateStmt->close();
+    }
+}
 ?>
-
-<!-- 4. FRONTEND HTML INTERFACE -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RFID Biometric Registration</title>
+    <title>Biometric Registration Gateway</title>
+    <link rel="stylesheet" href="bootstrap-5.3.5-dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     <style>
-        body {
-            font-family: 'Segoe UI', Arial, sans-serif;
-            background-color: #f4f6f9;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-        }
-        .enroll-card {
-            background: #ffffff;
-            padding: 40px;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
-            width: 420px;
-        }
-        h2 { color: #2c3e50; margin-bottom: 5px; text-align: center; }
-        p { color: #7f8c8d; margin-bottom: 25px; font-size: 0.9rem; text-align: center; }
-        
-        label {
-            display: block;
-            text-align: left;
-            margin-bottom: 8px;
-            font-weight: 600;
-            color: #34495e;
-        }
-        select {
-            width: 100%;
-            padding: 12px;
-            border-radius: 6px;
-            border: 1px solid #ccc;
-            font-size: 1rem;
-            margin-bottom: 25px;
-            background-color: #fff;
-            box-sizing: border-box;
-        }
-        .alert-box {
-            padding: 15px;
-            border-radius: 6px;
-            font-weight: 600;
-            border-left: 5px solid;
-            margin-bottom: 25px;
-            text-align: center;
-        }
-        .info { background: #eef2f7; color: #34495e; border-left-color: #3498db; }
-        .success { background: #e8f8f5; color: #117a65; border-left-color: #2ecc71; }
-        .danger { background: #feadad; color: #900c3f; border-left-color: #c70039; }
-
-        /* Keeps the scanner focus box invisible but highly active */
-        #rfid_uid {
-            position: absolute;
-            opacity: 0;
-            left: -9999px;
-        }
-        .scan-indicator {
-            font-size: 0.85rem;
-            color: #95a5a6;
-            margin-top: 15px;
-            font-style: italic;
-            text-align: center;
-        }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body { background-color: #f8f9fa; font-family: 'Inter', sans-serif; padding: 40px; }
+        .enroll-card { background: #ffffff; border-radius: 16px; padding: 30px; box-shadow: 0 4px 6px rgba(0,0,0,0.02); border: 1px solid #f1f3f5; }
+        #rfid_uid_display { font-family: monospace; font-size: 1.2rem; font-weight: bold; color: #2563eb; letter-spacing: 1px; }
+        .scanner-wait-box { background: #f8fafc; border: 2px dashed #cbd5e1; border-radius: 8px; text-align: center; padding: 20px; position: relative; }
+        #rfid_capture_input { position: absolute; opacity: 0; top:0; left:0; width:100%; height:100%; cursor: pointer; }
     </style>
 </head>
 <body>
 
-<div class="enroll-card">
-    <h2>RFID Enrollment Station</h2>
-    <p>Link a physical badge to an employee database profile</p>
-    
-    <div class="alert-box <?php echo $alert_class; ?>">
-        <?php echo htmlspecialchars($msg); ?>
+<div class="container" style="max-width: 800px;">
+    <div class="mb-4">
+        <a href="employee.php" class="btn btn-sm btn-outline-secondary"><i class="fa-solid fa-arrow-left me-2"></i>Back to Dashboard</a>
     </div>
 
-    <form id="enrollmentForm" action="enrollment.php" method="POST">
-        <label for="user_id">Select Employee Profile:</label>
-        <select name="user_id" id="user_id" required>
-            <option value="" disabled selected>-- Choose employee without RFID --</option>
-            <?php 
-            if ($unregistered_users && $unregistered_users->num_rows > 0) {
-                while($row = $unregistered_users->fetch_assoc()) {
-                    echo "<option value='". $row['id'] ."'>" . htmlspecialchars($row['first_name'] . " " . $row['last_name']) . " (" . ucfirst($row['role']) . ")</option>";
-                }
-            } else {
-                echo "<option value='' disabled>All employees have registered RFIDs</option>";
-            }
-            ?>
-        </select>
+    <div class="enroll-card">
+        <h3 class="mb-2" style="font-weight:700; color:#0f172a;">RFID Credential Enrollment</h3>
+        <p class="text-muted mb-4 small">Link unassigned physical smart badges to identity entries inside your relational profile ledger matrix.</p>
 
-        <!-- Hidden input capturing hardware emulator string sequence -->
-        <input type="text" id="rfid_uid" name="rfid_uid" autocomplete="off" required>
-    </form>
+        <?php if (!empty($msg)): ?>
+            <div class="alert <?php echo $alert_class; ?> py-2 px-3 mb-4 rounded-3 small"><?php echo $msg; ?></div>
+        <?php endif; ?>
 
-    <div class="scan-indicator">
-        *Cursor stays auto-locked. Choose a name, then scan card to save.*
+        <form action="biometric_enrollment.php" method="POST" id="enrollForm">
+            <div class="row g-4">
+                <div class="col-md-6">
+                    <label class="form-label font-weight-bold small text-secondary">1. Target Employee Profile</label>
+                    <select class="form-select" name="emp_id" required>
+                        <option value="">-- Choose Profile Entry --</option>
+                        <?php
+                        // Populates using the unique string 'employee_id' as the option value attribute
+                        $empQ = "SELECT employee_id, name FROM employees WHERE biometric_rfid IS NULL OR biometric_rfid = '' ORDER BY name ASC";
+                        $empRes = $conn->query($empQ);
+
+                        if (!$empRes) {
+                            echo '<option value="" disabled class="text-danger">SQL Error: ' . htmlspecialchars($conn->error) . '</option>';
+                        } elseif ($empRes->num_rows > 0) {
+                            while($e = $empRes->fetch_assoc()) {
+                                echo '<option value="'.htmlspecialchars($e['employee_id']).'">'.htmlspecialchars($e['name']).' ('.htmlspecialchars($e['employee_id']).')</option>';
+                            }
+                        } else {
+                            echo '<option value="" disabled>No unassigned employees found</option>';
+                        }
+                        ?>
+                    </select>
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label font-weight-bold small text-secondary">2. Scan Physical RFID Badge</label>
+                    <div class="scanner-wait-box" id="scannerZone">
+                        <span id="scanPromptText"><i class="fa-solid fa-fingerprint fa-bounce me-2 text-primary"></i>Click here & Tap Badge</span>
+                        <span id="rfid_uid_display" class="d-none"></span>
+                        
+                        <input type="text" id="rfid_capture_input" name="rfid_uid" autocomplete="off">
+                    </div>
+                </div>
+
+                <div class="col-12 text-end mt-4">
+                    <button type="submit" class="btn btn-primary px-4" style="background-color:#2563eb; border:none; border-radius:8px; font-weight:500;">Assign Credential Map</button>
+                </div>
+            </div>
+        </form>
     </div>
 </div>
 
 <script>
-    const rfidInput = document.getElementById('rfid_uid');
-    const userSelect = document.getElementById('user_id');
+document.addEventListener("DOMContentLoaded", function() {
+    const hiddenInput = document.getElementById('rfid_capture_input');
+    const zoneBox = document.getElementById('scannerZone');
+    const promptText = document.getElementById('scanPromptText');
+    const displayVal = document.getElementById('rfid_uid_display');
 
-    // Lock cursor target onto hidden scanner input unless interacting with dropdown selection
-    document.addEventListener('click', (e) => {
-        if (e.target !== userSelect) {
-            rfidInput.focus();
+    hiddenInput.focus();
+    document.addEventListener('click', () => hiddenInput.focus());
+
+    hiddenInput.addEventListener('input', function() {
+        if(this.value.trim().length > 2) {
+            promptText.classList.add('d-none');
+            displayVal.innerText = this.value.toUpperCase();
+            displayVal.classList.remove('d-none');
+            zoneBox.style.borderStyle = 'solid';
+            zoneBox.style.borderColor = '#2563eb';
+            zoneBox.style.background = '#eff6ff';
         }
     });
-
-    // Ensure initial landing context sets form focus appropriately
-    window.onload = () => rfidInput.focus();
-
-    // Prevent submission attempts on mechanical card taps if user has not chosen an employee profile
-    document.getElementById('enrollmentForm').addEventListener('submit', function(e) {
-        if (userSelect.value === "") {
-            e.preventDefault();
-            alert("Please choose an employee from the dropdown list before tapping the card!");
-            rfidInput.value = ""; // Clear string data
-            rfidInput.focus();
-        }
-    });
-
-    // Clear alert indicators automatically after 5 seconds to reset system layout
-    if (window.location.search.includes('msg=')) {
-        setTimeout(() => {
-            window.location.href = 'enrollment.php';
-        }, 5000);
-    }
+});
 </script>
 
 </body>

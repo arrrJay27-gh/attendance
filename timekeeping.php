@@ -47,8 +47,10 @@ if ($resAvgTime && $row = $resAvgTime->fetch_assoc()) {
 $sqlDepts = "SELECT DISTINCT department FROM timekeeping_table WHERE department IS NOT NULL AND department != '' ORDER BY department ASC";
 $resultDepts = $conn->query($sqlDepts);
 
-// --- MAIN TABLE: Fetch Timekeeping Records ---
-$sql = "SELECT id, employee_name, department, time_in, time_out, status FROM timekeeping_table ORDER BY id DESC"; 
+// --- MAIN TABLE: Fetch Timekeeping Records (Sorted by recent date and time) ---
+$sql = "SELECT id, employee_name, department, time_in, time_out, status 
+        FROM timekeeping_table 
+        ORDER BY date_record DESC, time_in DESC"; 
 $result = $conn->query($sql);
 ?>
 <!DOCTYPE html>
@@ -58,13 +60,10 @@ $result = $conn->query($sql);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Timekeeping - Kiwi Digital</title>
     
-    <!-- Local Bootstrap File Link -->
+   
     <link class="stylesheet" href="bootstrap.min.css">
-
-    <!-- Font Awesome 6 CDN Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     
-    <!-- Preserves the minimized state instantly across headers to prevent layout flashes -->
     <script>try{if(localStorage.getItem('sidebarMinimized')==='true'){document.documentElement.classList.add('sidebar-minimized');}}catch(e){}</script>
 
     <style>

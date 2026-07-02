@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS `users` (
   `first_name` VARCHAR(100) DEFAULT NULL,
   `last_name` VARCHAR(100) DEFAULT NULL,
   `email` VARCHAR(150) DEFAULT NULL,
-  `biometric_rfid` VARCHAR(255) DEFAULT NULL,
+  `biometric_rfid` VARCHAR(255) DEFAULT NULL, 
   `fingerprint_template` LONGTEXT DEFAULT NULL,
   `facial_map` LONGTEXT DEFAULT NULL,
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

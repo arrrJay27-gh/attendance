@@ -533,4 +533,4 @@ $total_employees_count = ($total_emp_res && $row = $total_emp_res->fetch_assoc()
     </script>
 </body>
 </html>
-<?php $conn->close(); ?>
+<?php $conn->close(); ?>    
