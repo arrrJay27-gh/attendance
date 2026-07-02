@@ -10,6 +10,9 @@
 
     <!-- Font Awesome 6 CDN Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    
+    <!-- Inline page flashing guard matching index.php -->
+    <script>try{if(localStorage.getItem('sidebarMinimized')==='true'){document.documentElement.classList.add('sidebar-minimized');}}catch(e){}</script>
 
     <style>
         /* Google Font matching clean modern UI style */
@@ -29,133 +32,218 @@
             overflow: hidden;
         }
 
-        /* Main Application Layout Wrapper */
-        .app-container {
-            display: flex;
-            gap: 24px;
-            height: calc(100vh - 40px);
-            width: 100%;
+        /* Layout Grid System (EXACTLY MATCHED TO INDEX.PHP) */
+        .app-container { 
+            display: grid; 
+            grid-template-columns: 310px 1fr; 
+            gap: 30px; 
+            height: calc(100vh - 40px); 
+            width: 100%; 
+            position: relative;
+            transition: grid-template-columns 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        /* Handle minimized state grid column switch */
+        .sidebar-minimized .app-container {
+            grid-template-columns: 85px 1fr;
         }
 
-        /* ==========================================================================
-           SIDEBAR STYLES (MATCHED EXACTLY TO THE SYSTEM STANDARD)
-           ========================================================================== */
+        .main-content { 
+            flex-grow: 1; 
+            padding-top: 10px; 
+            height: 100%; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 16px; 
+            overflow: hidden; 
+        }
+
+        /* ==================================================================
+           SIDEBAR STYLES (MATCHED EXACTLY TO INDEX.PHP)
+           ================================================================== */
         .sidebar {
-            width: 280px;
+            width: 100%;
+            background-color: #dcdddf; /* Grey tone capsule container background */
+            border-radius: 36px;       /* Pill shape corner flow configuration */
+            padding: 45px 0 35px 0;
+            display: flex;
+            flex-direction: column;
+            position: relative;
             height: 100%;
-            background-color: #dbdbdb; 
-            border-radius: 20px;
-            display: flex;
-            flex-direction: column;
-            padding: 30px 0;
-            flex-shrink: 0;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
-
-        .logo-container {
-            text-align: center;
-            margin-bottom: 40px;
-            padding: 0 20px;
-        }
-
-        .logo-img {
-            width: 65px;
-            height: auto;
-            display: block;
-            margin: 0 auto;
-        }
-
-        .nav-links {
-            list-style: none;
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-            width: 100%;
-        }
-
-        .nav-item {
-            width: 100%;
-        }
-
-        .nav-item a {
-            display: flex;
-            align-items: center;
-            text-decoration: none;
-            padding: 14px 0 14px 35px;
-            color: #555555; 
-            font-size: 16px;
-            font-weight: 600;
-            transition: all 0.15s ease;
-        }
-
-        .icon {
-            font-size: 20px;
-            width: 30px;
-            margin-right: 14px;
+        
+        .sidebar-header {
             display: flex;
             justify-content: center;
             align-items: center;
-            color: #555555;
+            margin-bottom: 35px;
+            width: 100%;
+            position: relative;
+            padding: 0 20px;
         }
-
-        /* Highlighted style active state on Leave Management */
+        
+        .logo-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+        }
+        
+        /* Smooth scale layout setup for the core corporate logo image */
+        .logo-img {
+            max-width: 140px;
+            height: auto;
+            transition: max-width 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s ease;
+        }
+        
+        /* Floating Round Sidebar Switcher Button Layout Profile */
+        .sidebar-toggle-btn {
+            position: absolute;
+            top: 10px;
+            right: -13px;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background-color: #ffffff;
+            border: none;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 100;
+            color: #52525b;
+        }
+        
+        .sidebar-toggle-btn i {
+            font-size: 11px;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .nav-links {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            flex-grow: 1;
+        }
+        
+        .nav-item {
+            width: 100%;
+        }
+        
+        .nav-item a {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            padding: 15px 35px;
+            color: #434850; 
+            text-decoration: none;
+            font-size: 16px;
+            font-weight: 600;
+            transition: color 0.2s;
+        }
+        
+        /* White Active Element Tab Inset Configuration */
         .nav-item.active a {
             background-color: #ffffff;
-            color: #444444;
-            border-top-right-radius: 12px;
-            border-bottom-right-radius: 12px;
-            margin-right: 25px; 
-            padding-left: 35px; 
+            color: #11161e;
+            border-top-right-radius: 18px;
+            border-bottom-right-radius: 18px;
+            margin-right: 20px;
+            padding-left: 35px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
         }
-
-        .nav-item.active .icon {
-            color: #444444;
+        
+        .nav-item a i.icon {
+            font-size: 20px;
+            width: 26px;
+            text-align: center;
+            color: #434850;
         }
-
-        .nav-item:not(.active) a:hover {
-            color: #222222;
-            padding-left: 38px;
+        
+        .nav-item.active a i.icon {
+            color: #11161e;
         }
-
+        
         .sidebar-footer {
             margin-top: auto;
-            padding-left: 35px;
         }
-
+        
         .logout-btn {
             display: flex;
             align-items: center;
+            gap: 20px;
+            padding: 15px 35px;
+            color: #434850;
             text-decoration: none;
-            color: #555555;
-            font-size: 13px;
+            font-size: 16px;
             font-weight: 600;
+        }
+        
+        /* ==================================================================
+           MINIMIZED STATE TRANSITIONS & AUTOMATIC LOGO RESIZING
+           ================================================================== */
+        .sidebar-minimized .sidebar {
+            padding: 45px 0 35px 0;
+        }
+        
+        /* Resize the logo container and image smoothly when minimized */
+        .sidebar-minimized .sidebar .logo-img {
+            max-width: 40px; /* Adjusts width down to a small icon size */
+            transform: scale(1);
+        }
+        
+        .sidebar-minimized .sidebar .nav-item a span,
+        .sidebar-minimized .sidebar .logout-btn span {
+            display: none;
+        }
+        
+        .sidebar-minimized .sidebar .nav-item a {
+            justify-content: center;
+            padding: 15px 0;
+        }
+        
+        .sidebar-minimized .sidebar .nav-item.active a {
+            margin-right: 10px;
+            padding-left: 0;
+            border-radius: 0 16px 16px 0;
+        }
+        
+        .sidebar-minimized .sidebar .logout-btn {
+            justify-content: center;
+            padding: 15px 0;
+        }
+        
+        .sidebar-minimized .sidebar-toggle-btn i {
+            transform: rotate(180deg);
         }
 
         /* ==========================================================================
-           MAIN LEAVE LIST PANEL BLOCK (MATCHED TO Screenshot 2026-06-25 151121.png)
+           MAIN LEAVE LIST PANEL BLOCK
            ========================================================================== */
-        .main-content {
-            flex-grow: 1;
-            padding-top: 10px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-        }
-
         .leave-list-panel {
             background-color: #ffffff;
             border-radius: 16px;
             padding: 24px;
             width: 100%;
+            height: 100%;
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02), 0 1px 2px rgba(0, 0, 0, 0.04);
             border: 1px solid #f1f3f5;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
         }
 
-        /* Top Bar Header Area inside card container */
         .panel-header-strip {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 24px;
+            flex-shrink: 0;
         }
 
         .panel-title-side {
@@ -164,7 +252,6 @@
             gap: 12px;
         }
 
-        /* Purple layout visual block from screenshot */
         .purple-indicator {
             width: 6px;
             height: 24px;
@@ -184,7 +271,6 @@
             gap: 12px;
         }
 
-        /* View Toggle Layout Component Buttons */
         .view-toggle-btn {
             width: 38px;
             height: 38px;
@@ -223,12 +309,10 @@
             background-color: #4f46e5;
         }
 
-        /* ==========================================================================
-           EMPLOYEES LEAVE LIST SYSTEM DATA TABLE
-           ========================================================================== */
         .table-responsive-wrapper {
-            overflow-x: auto;
+            overflow-y: auto;
             width: 100%;
+            flex-grow: 1;
         }
 
         .leave-data-table {
@@ -245,6 +329,9 @@
             border-bottom: 1px solid #f1f5f9;
             background-color: #f8fafc;
             font-size: 13px;
+            position: sticky;
+            top: 0;
+            z-index: 10;
         }
 
         .leave-data-table th i {
@@ -260,7 +347,6 @@
             border-bottom: 1px solid #f1f5f9;
         }
 
-        /* Profile metadata elements */
         .emp-profile-block {
             display: flex;
             align-items: center;
@@ -306,16 +392,12 @@
             padding-left: 8px;
         }
 
-        /* ==========================================================================
-           SPECIFIC INTERACTION BADGES & PILLS
-           ========================================================================== */
         .action-flex-box {
             display: flex;
             align-items: center;
             gap: 8px;
         }
 
-        /* Pending Option: Approve pill triggers */
         .btn-action-approve {
             background-color: #6366f1;
             color: #ffffff;
@@ -344,7 +426,6 @@
             cursor: pointer;
         }
 
-        /* Permanent Badge Outcomes */
         .status-outcome-badge {
             display: inline-flex;
             padding: 6px 16px;
@@ -371,65 +452,45 @@
 
     <div class="app-container">
         
-        <!-- SIDEBAR COMPONENT -->
-        <nav class="sidebar">
-            <div class="logo-container">
-                <img src="img/kiwi.png" alt="Logo" class="logo-img">
+        <?php
+        $activePage = 'leave';
+        $imgPrefix = $imgPrefix ?? '';
+        $navItems = [
+            ['id' => 'dashboard',   'href' => 'index.php',       'icon' => 'fa-table-cells-large',       'label' => 'Dashboard'],
+            ['id' => 'employee',    'href' => 'employee.php',    'icon' => 'fa-users-rectangle',         'label' => 'Employee'],
+            ['id' => 'biometric',   'href' => '#',               'icon' => 'fa-fingerprint',             'label' => 'Biometric Enrollment'],
+            ['id' => 'timekeeping', 'href' => 'timekeeping.php', 'icon' => 'fa-clipboard-user',          'label' => 'Timekeeping'],
+            ['id' => 'shift',       'href' => '#',               'icon' => 'fa-right-left',              'label' => 'Shift Configuration'],
+            ['id' => 'leave',       'href' => 'leave.php',       'icon' => 'fa-user-gear',               'label' => 'Leave Management'],
+            ['id' => 'internship',  'href' => '#',               'icon' => 'fa-cubes',                   'label' => 'Internship Registry'],
+            ['id' => 'audit',       'href' => '#',               'icon' => 'fa-square-poll-horizontal',  'label' => 'System Audit'],
+        ];
+        ?>
+
+        <!-- EXACT INDEX SIDEBAR EMBED -->
+        <nav class="sidebar" id="sidebarContainer">
+            <div class="sidebar-header">
+                <div class="logo-container">
+                    <img src="<?php echo htmlspecialchars($imgPrefix); ?>img/kiwi.png" alt="KIWI DIGITAL TECH INC." class="logo-img">
+                </div>
+                <button type="button" class="sidebar-toggle-btn" id="toggleSidebarBtn" aria-label="Toggle sidebar">
+                    <i class="fa-solid fa-chevron-left" id="toggleIcon"></i>
+                </button>
             </div>
 
             <ul class="nav-links">
-                <li class="nav-item">
-                    <a href="index.php">
-                        <i class="fa-solid fa-table-cells-large icon"></i>
-                        <span>Dashboard</span>
+                <?php foreach ($navItems as $item): ?>
+                <li class="nav-item<?php echo $activePage === $item['id'] ? ' active' : ''; ?>">
+                    <a href="<?php echo htmlspecialchars($item['href']); ?>">
+                        <i class="fa-solid <?php echo htmlspecialchars($item['icon']); ?> icon"></i>
+                        <span><?php echo htmlspecialchars($item['label']); ?></span>
                     </a>
                 </li>
-                <li class="nav-item">
-                    <a href="employee.php">
-                        <i class="fa-solid fa-users-rectangle icon"></i>
-                        <span>Employee</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="biometric.php">
-                        <i class="fa-solid fa-fingerprint icon"></i>
-                        <span>Biometric Enrollment</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="timekeeping.php">
-                        <i class="fa-solid fa-clipboard-user icon"></i>
-                        <span>Timekeeping</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="shift.php">
-                        <i class="fa-solid fa-right-left icon"></i>
-                        <span>Shift Configuration</span>
-                    </a>
-                </li>
-                <li class="nav-item active">
-                    <a href="leave.php">
-                        <i class="fa-solid fa-user-gear icon"></i>
-                        <span>Leave Management</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="internship.php">
-                        <i class="fa-solid fa-cubes icon"></i>
-                        <span>Internship Registry</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="audit.php">
-                        <i class="fa-solid fa-square-poll-horizontal icon"></i>
-                        <span>System Audit</span>
-                    </a>
-                </li>
+                <?php endforeach; ?>
             </ul>
 
             <div class="sidebar-footer">
-                <a href="#" class="logout-btn">
+                <a href="logout.php" class="logout-btn">
                     <i class="fa-solid fa-right-from-bracket icon"></i>
                     <span>Logout</span>
                 </a>
@@ -438,17 +499,12 @@
 
         <!-- MAIN WINDOW DISPLAY VIEW -->
         <main class="main-content">
-            
-            <!-- CARD CONTAINER FRAME -->
             <div class="leave-list-panel">
-                
-                <!-- TOP HEADER CONTROL ACTIONS BAR -->
                 <div class="panel-header-strip">
                     <div class="panel-title-side">
                         <div class="purple-indicator"></div>
                         <h1 class="panel-heading-text">Employees Leave List</h1>
                     </div>
-                    
                     <div class="panel-actions-side">
                         <button class="view-toggle-btn active"><i class="fa-solid fa-list"></i></button>
                         <button class="view-toggle-btn"><i class="fa-solid fa-grip"></i></button>
@@ -456,7 +512,6 @@
                     </div>
                 </div>
 
-                <!-- MAIN SYSTEM DATA TABLE -->
                 <div class="table-responsive-wrapper">
                     <table class="leave-data-table">
                         <thead>
@@ -561,7 +616,6 @@
                                 <td class="date-log-text">August 26,2025</td>
                                 <td class="date-log-text">August 30,2025</td>
                                 <td class="days-count-badge">4</td>
-                                style="text-align: center;"
                                 <td style="text-align: center;">
                                     <span class="status-outcome-badge approved">Approved</span>
                                 </td>
@@ -629,10 +683,19 @@
                         </tbody>
                     </table>
                 </div>
-
             </div>
         </main>
     </div>
 
+    <!-- Toggle Script handler matching index.php -->
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const toggleSidebarBtn = document.getElementById('toggleSidebarBtn');
+            toggleSidebarBtn.addEventListener('click', function() {
+                const isMinimized = document.documentElement.classList.toggle('sidebar-minimized');
+                localStorage.setItem('sidebarMinimized', isMinimized);
+            });
+        });
+    </script>
 </body>
 </html>

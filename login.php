@@ -1,36 +1,38 @@
 <?php
-// Start session and configure cache prevention headers
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
-
-// STAGE 1: Prevent Back/Forward browser caching of this page
+// Prevent browser caching of this page
 header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 header("Cache-Control: post-check=0, pre-check=0", false);
 header("Pragma: no-cache");
 
-// STAGE 2: If the user is already legitimately logged in, redirect them directly to the dashboard
-if (isset($_SESSION['user_id'])) {
-    header("Location: hr_dashboard.php");
-    exit();
-}
+require_once 'database.php';
 
-// Dummy processing for demo layout
 $error = "";
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $email = trim($_POST['email']);
-    $password = $_POST['password'];
+if ($_SERVER["REQUEST_METHOD"] === "POST") {
+    $email = trim($_POST['email'] ?? '');
+    $password = $_POST['password'] ?? '';
 
-    // Replace this with your actual database authentication logic
-    if ($email === "bartlomiej.stepniewski@semiflat.studio" && $password === "password123") {
-        $_SESSION['user_id'] = 1;
-        $_SESSION['user_email'] = $email;
-        $_SESSION['user_name'] = "Bartlomiej";
-        
-        header("Location: hr_dashboard.php");
-        exit();
+    if ($email === '' || $password === '') {
+        $error = "Please enter both email and password.";
     } else {
-        $error = "Invalid email or password configuration.";
+        $database = new Database();
+        $conn = $database->getConnection();
+
+        $sql = "SELECT id, first_name, last_name, email, password FROM users WHERE email = ? LIMIT 1";
+        $stmt = $conn->prepare($sql);
+        if ($stmt) {
+            $stmt->bind_param('s', $email);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            $user = $result ? $result->fetch_assoc() : null;
+            $stmt->close();
+
+            if ($user && password_verify($password, $user['password'])) {
+                header('Location: hr_dashboard.php');
+                exit();
+            }
+        }
+
+        $error = "Invalid email or password.";
     }
 }
 ?>

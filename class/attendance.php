@@ -56,9 +56,14 @@ class Attendance {
             $stmtS->close();
         }
 
-        // Check if an attendance log entry exists for today
-        $sqlLog = "SELECT * FROM attendance_logs WHERE user_id = ? AND punch_date = ?";
+        // Check if an attendance log entry exists for today (Changed user_id to employee_id)
+        $sqlLog = "SELECT * FROM attendance WHERE employee_id = ? AND punch_date = ?";
         $stmtL = $this->db->prepare($sqlLog);
+        
+        if (!$stmtL) {
+            return ["status" => "error", "message" => "Database prepare failed: " . $this->db->error];
+        }
+
         $stmtL->bind_param("is", $userId, $currentDate);
         $stmtL->execute();
         $existingLog = $stmtL->get_result()->fetch_assoc();
@@ -73,7 +78,8 @@ class Attendance {
                 $isLate = 1;
             }
 
-            $sqlInsert = "INSERT INTO attendance_logs (user_id, punch_date, time_in, is_late) VALUES (?, ?, ?, ?)";
+            // Changed user_id to employee_id
+            $sqlInsert = "INSERT INTO attendance (employee_id, punch_date, time_in, is_late) VALUES (?, ?, ?, ?)";
             $stmtI = $this->db->prepare($sqlInsert);
             $stmtI->bind_param("issi", $userId, $currentDate, $liveTimestamp, $isLate);
             $stmtI->execute();
@@ -100,7 +106,7 @@ class Attendance {
             return ["status" => "error", "message" => "All terminal operational loops for today are closed."];
         }
 
-        $sqlUpdate = "UPDATE attendance_logs SET {$column} = ? WHERE id = ?";
+        $sqlUpdate = "UPDATE attendance SET {$column} = ? WHERE id = ?";
         $stmtU = $this->db->prepare($sqlUpdate);
         $stmtU->bind_param("si", $liveTimestamp, $existingLog['id']);
         $stmtU->execute();

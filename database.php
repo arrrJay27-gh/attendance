@@ -4,7 +4,7 @@
 define('DB_HOST', 'localhost');
 define('DB_USER', 'root');
 define('DB_PASS', '');
-define('DB_NAME', 'securtime_db');
+define('DB_NAME', 'attendance_kiwi');
 
 // Core Business & Compliance Configuration Parameters
 define('GRACE_PERIOD_MINUTES', 15);
