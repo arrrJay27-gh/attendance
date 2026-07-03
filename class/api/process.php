@@ -32,7 +32,6 @@ if ($isFace && (!isset($input['liveness_verified']) || $input['liveness_verified
 
 // Step 2: Process User Identity Validation
 $user = $attendanceEngine->verifyIdentity($authMode, $rfid, $biometricTemplate, $isFace);
-
 if (!$user) {
     echo json_encode(["status" => "error", "message" => "Access Denied: Invalid biometric signatures."]);
     exit();

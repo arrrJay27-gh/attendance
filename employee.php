@@ -163,7 +163,7 @@ $total_employees_count = ($total_emp_res && $row = $total_emp_res->fetch_assoc()
         $navItems = [
             ['id' => 'dashboard',   'href' => 'index.php',       'icon' => 'fa-table-cells-large',       'label' => 'Dashboard'],
             ['id' => 'employee',    'href' => 'employee.php',    'icon' => 'fa-users-rectangle',         'label' => 'Employee'],
-            ['id' => 'biometric',   'href' => '#',               'icon' => 'fa-fingerprint',             'label' => 'Biometric Enrollment'],
+            ['id' => 'biometric',   'href' => 'biometrics.php',               'icon' => 'fa-fingerprint',             'label' => 'Biometric Enrollment'],
             ['id' => 'timekeeping', 'href' => 'timekeeping.php', 'icon' => 'fa-clipboard-user',          'label' => 'Timekeeping'],
             ['id' => 'shift',       'href' => '#',               'icon' => 'fa-right-left',              'label' => 'Shift Configuration'],
             ['id' => 'leave',       'href' => 'leave.php',       'icon' => 'fa-user-gear',               'label' => 'Leave Management'],
@@ -532,5 +532,5 @@ $total_employees_count = ($total_emp_res && $row = $total_emp_res->fetch_assoc()
     });
     </script>
 </body>
-</html>
+</html> 
 <?php $conn->close(); ?>    
