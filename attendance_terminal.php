@@ -15,28 +15,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['rfid_uid'])) {
     $liveTimestamp = date('Y-m-d H:i:s');
     $display_time = date('h:i:s A');
 
-    
+    // Establish DB connection
     $dbConnection = new mysqli("localhost", "root", "", "attendance_kiwi");
 
     if ($dbConnection->connect_error) {
         die("Connection architecture failure: " . $dbConnection->connect_error);
     }
 
+   
     
-   $attendanceEngine = new Attendance($dbConnection);
+    $attendanceEngine = new Attendance($dbConnection);
     
-    // 1. Query the 'employees' table instead of 'users'
-    $sql = "SELECT name FROM employees WHERE biometric_rfid = ?";
+    // 1. First, try an exact match (handles text/varchar columns with leading zeros)
+    $sql = "SELECT name FROM users WHERE biometric_rfid = ?";
     $stmt = $dbConnection->prepare($sql);
     $stmt->bind_param("s", $rfid_uid);
     $stmt->execute();
     $userProfile = $stmt->get_result()->fetch_assoc();
     $stmt->close();
 
+    // 2. Fallback: If not found, trim leading zeros (handles numerical INT columns)
+    if (!$userProfile) {
+        $cleaned_rfid = ltrim($rfid_uid, '0');
+        if (!empty($cleaned_rfid)) {
+            $sql = "SELECT name FROM employees WHERE biometric_rfid = ?";
+            $stmt = $dbConnection->prepare($sql);
+            $stmt->bind_param("s", $cleaned_rfid);
+            $stmt->execute();
+            $userProfile = $stmt->get_result()->fetch_assoc();
+            $stmt->close();
+        }
+    }
+
     if ($userProfile) {
         $fullName = $userProfile['name'];
-
-        // 2. Pass the retrieved name to your log function
+        // ... (rest of your matching log punch code remains exactly the same)
+        // Pass the employee's name to the timekeeping logger engine
         $punchResult = $attendanceEngine->logTimePunch($fullName, $liveTimestamp);
 
         if ($punchResult['status'] === 'success') {
@@ -62,8 +76,6 @@ if (isset($_GET['msg']) && isset($_GET['class'])) {
     $alert_class = $_GET['class'];
 }
 ?>
-
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -99,13 +111,12 @@ if (isset($_GET['msg']) && isset($_GET['class'])) {
             font-size: 1.05rem;
             line-height: 1.5;
             text-align: left;
+            margin-bottom: 20px;
         }
-        /* Dynamic color themes mapping to operational feedback states */
         .info { background: #eef2f7; color: #34495e; border-left-color: #3498db; }
         .success { background: #e8f8f5; color: #117a65; border-left-color: #2ecc71; }
         .danger { background: #fdf2f2; color: #922b21; border-left-color: #e74c3c; }
 
-        /* Secure input architecture: visually obfuscate focus field while sustaining element listeners */
         #rfid_uid {
             position: absolute;
             opacity: 0;
@@ -122,24 +133,23 @@ if (isset($_GET['msg']) && isset($_GET['class'])) {
             padding: 10px 0;
             border-radius: 6px;
         }
+        .form-select {
+            width: 100%;
+            padding: 8px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            margin-top: 5px;
+        }
+        .action-container {
+            text-align: left;
+            margin-top: 15px;
+            color: #434850;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
     </style>
 </head>
 <body>
-
-
-<!-- Inside your attendance_terminal.php form -->
-<form id="attendanceForm" action="attendance_terminal.php" method="POST">
-    <input type="text" id="rfid_uid" name="rfid_uid" autofocus autocomplete="off">
-    
-    <!-- Add a selection for manual override -->
-    <div class="mt-3">
-        <label>Action:</label>
-        <select name="action_type" class="form-select">
-            <option value="auto">Auto (Clock In/Out)</option>
-            <option value="clock_out">Manual Clock Out</option>
-        </select>
-    </div>
-</form>
 
 <div class="scanner-card">
     <div class="clock-display" id="live-clock">00:00:00 AM</div>
@@ -150,17 +160,34 @@ if (isset($_GET['msg']) && isset($_GET['class'])) {
         <?php echo htmlspecialchars($msg); ?>
     </div>
 
+    <!-- Unified Single Form Structure -->
     <form id="attendanceForm" action="attendance_terminal.php" method="POST">
         <input type="text" id="rfid_uid" name="rfid_uid" autofocus autocomplete="off">
+        
+        <div class="action-container">
+            <label for="action_type">Scan Action Override Type:</label>
+            <select name="action_type" id="action_type" class="form-select">
+                <option value="auto">Auto Check-In / Check-Out</option>
+                <option value="clock_out">Forced Manual Clock Out</option>
+            </select>
+        </div>
     </form>
 </div>
 
 <script>
     const rfidInput = document.getElementById('rfid_uid');
+    const attendanceForm = document.getElementById('attendanceForm');
 
+    // Keep hidden input field continually targeted by key input listeners
     document.addEventListener('click', () => rfidInput.focus());
     window.onload = () => rfidInput.focus();
 
+    // Automatically submit form layout when data injection finishes
+    rfidInput.addEventListener('input', function() {
+        if(this.value.trim().length >= 8) { 
+            setTimeout(() => { attendanceForm.submit(); }, 300);
+        }
+    });
 
     function updateClock() {
         const now = new Date();
@@ -170,6 +197,7 @@ if (isset($_GET['msg']) && isset($_GET['class'])) {
     setInterval(updateClock, 1000);
     updateClock();
 
+    // Redirect timeout to clear alert messages from layout
     if (window.location.search.includes('msg=')) {
         setTimeout(() => {
             window.location.href = 'attendance_terminal.php';

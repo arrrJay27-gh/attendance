@@ -171,7 +171,7 @@ $total_absent = ($absent_res && $row = $absent_res->fetch_assoc()) ? $row['total
 
     <main class="main-content">
         <div class="dashboard-header-bar">
-            <h1 class="dashboard-title">Employee</h1>
+    
         </div>
 
         <div class="dashboard-row-layout">

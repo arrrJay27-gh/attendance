@@ -36,7 +36,7 @@ CREATE TABLE employees (
     name VARCHAR(100) NOT NULL,
     email VARCHAR(100),
     department VARCHAR(100) NOT NULL,
-    position VARCHAR(100) NOT NULL,
+    position VARCHAR(100) NOT NULL,attendanceattendancecolumns_privcolumns_privattendanceattendance
     status VARCHAR(50) NOT NULL,
     created_at DATETIME NOT NULL
 );
