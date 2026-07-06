@@ -1,23 +1,18 @@
-<?php 
-$activePage = 'biometric'; 
-$imgPrefix = './'; 
+<?php
+$activePage = 'biometric';
+$imgPrefix = './';
+require_once 'auth.php';
 require_once 'database.php';
+require_once 'class/Dashboard.php';
 
 $database = new Database();
 $conn = $database->getConnection();
-
-// Metrics queries
-$present_q = "SELECT COUNT(DISTINCT name) as total FROM attendance WHERE status='Present' AND DATE(date) = CURDATE()";
-$present_res = $conn->query($present_q);
-$total_present = ($present_res && $row = $present_res->fetch_assoc()) ? $row['total'] : 0;
-
-$late_q = "SELECT COUNT(DISTINCT name) as total FROM attendance WHERE status='Late' AND DATE(date) = CURDATE()";
-$late_res = $conn->query($late_q);
-$total_late = ($late_res && $row = $late_res->fetch_assoc()) ? $row['total'] : 0;
-
-$absent_q = "SELECT COUNT(DISTINCT name) as total FROM attendance WHERE status='Absent' AND DATE(date) = CURDATE()";
-$absent_res = $conn->query($absent_q);
-$total_absent = ($absent_res && $row = $absent_res->fetch_assoc()) ? $row['total'] : 0;
+$dashboard = new Dashboard($conn);
+$stats = $dashboard->getTodayStats();
+$total_present = $stats['present'];
+$total_late = $stats['late'];
+$total_absent = $stats['absent'];
+$avg_check_in = $stats['avg_check_in'];
 ?>
 <!DOCTYPE html>
 <html lang="en">

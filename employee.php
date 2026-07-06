@@ -1,25 +1,22 @@
-<?php 
-$activePage = 'employee'; 
+<?php
+require_once 'auth.php';
+$activePage = 'employee';
 require_once 'database.php';
+require_once 'class/Dashboard.php';
+require_once 'class/Employee.php';
 
 $database = new Database();
 $conn = $database->getConnection();
+$dashboard = new Dashboard($conn);
+$employeeService = new Employee($conn);
 
-$present_q = "SELECT COUNT(DISTINCT name) as total FROM attendance WHERE status='Present' AND DATE(date) = CURDATE()";
-$present_res = $conn->query($present_q);
-$total_present = ($present_res && $row = $present_res->fetch_assoc()) ? $row['total'] : 0;
-
-$late_q = "SELECT COUNT(DISTINCT name) as total FROM attendance WHERE status='Late' AND DATE(date) = CURDATE()";
-$late_res = $conn->query($late_q);
-$total_late = ($late_res && $row = $late_res->fetch_assoc()) ? $row['total'] : 0;
-
-$absent_q = "SELECT COUNT(DISTINCT name) as total FROM attendance WHERE status='Absent' AND DATE(date) = CURDATE()";
-$absent_res = $conn->query($absent_q);
-$total_absent = ($absent_res && $row = $absent_res->fetch_assoc()) ? $row['total'] : 0;
-
-$total_emp_q = "SELECT COUNT(*) as total FROM employees";
-$total_emp_res = $conn->query($total_emp_q);
-$total_employees_count = ($total_emp_res && $row = $total_emp_res->fetch_assoc()) ? $row['total'] : 0;
+$stats = $dashboard->getTodayStats();
+$total_present = $stats['present'];
+$total_late = $stats['late'];
+$total_absent = $stats['absent'];
+$avg_check_in = $stats['avg_check_in'];
+$total_employees_count = $stats['total_employees'];
+$employees = $employeeService->getAll('', 100, 0);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -89,8 +86,15 @@ $total_employees_count = ($total_emp_res && $row = $total_emp_res->fetch_assoc()
         .table-search-box input { width: 100%; padding: 10px 14px 10px 40px; border-radius: 50px; border: 1px solid #e2e8f0; background-color: #ffffff; font-size: 13px; outline: none; color: #334155; }
         
         .action-buttons-group { display: flex; gap: 10px; align-items: center; }
-        .btn-filter, .btn-export { background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 14px; font-size: 13px; font-weight: 500; color: #475569; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s; }
-        .btn-filter:hover, .btn-export:hover { background-color: #f8f9fa; border-color: #cbd5e1; }
+        .btn-filter, .btn-export { background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 14px; font-size: 13px; font-weight: 500; color: #475569; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s; text-decoration: none; }
+        .btn-filter:hover, .btn-export:hover { background-color: #f8f9fa; border-color: #cbd5e1; color: #475569; }
+        
+        /* Remove Bootstrap dropdown default arrow down symbol */
+        .btn-export.dropdown-toggle::after { display: none !important; }
+        .dropdown-menu { border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); border: 1px solid #e2e8f0; padding: 4px 0; }
+        .dropdown-item { font-size: 13px; padding: 8px 16px; color: #334155; }
+        .dropdown-item i { width: 16px; }
+
         .btn-add-employee { background-color: #2563eb; color: #ffffff; border: none; border-radius: 8px; padding: 8px 14px; font-size: 13px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: background 0.2s; }
         .btn-add-employee:hover { background-color: #1d4ed8; }
 
@@ -116,9 +120,6 @@ $total_employees_count = ($total_emp_res && $row = $total_emp_res->fetch_assoc()
         .action-dot-menu .btn { background: none; border: none; padding: 4px 8px; color: #94a3b8; font-size: 14px; border-radius: 4px; }
         .action-dot-menu .btn:after { display: none; }
         .action-dot-menu .btn:hover { color: #475569; background-color: #f1f5f9; }
-        .dropdown-menu { border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); border: 1px solid #e2e8f0; padding: 4px 0; }
-        .dropdown-item { font-size: 13px; padding: 8px 16px; color: #334155; }
-        .dropdown-item i { width: 16px; }
 
         .table-footer-pagination { display: flex; justify-content: space-between; align-items: center; width: 100%; flex-shrink: 0; margin-top: 4px; }
         .show-entries-dropdown { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #64748b; }
@@ -213,7 +214,7 @@ $total_employees_count = ($total_emp_res && $row = $total_emp_res->fetch_assoc()
                             <i class="fa-solid fa-circle-check"></i>
                             <span class="card-title">Total Employees Present</span>
                         </div>
-                        <div class="card-value"><?php echo $total_present; ?></div>
+                        <div class="card-value" data-stat-present><?php echo $total_present; ?></div>
                         <div class="card-footer">
                             <span class="badge positive"><i class="fa-solid fa-arrow-up"></i> Live</span>
                             <span>from database</span>
@@ -225,7 +226,7 @@ $total_employees_count = ($total_emp_res && $row = $total_emp_res->fetch_assoc()
                             <i class="fa-solid fa-user-clock"></i>
                             <span class="card-title">Late Arrivals Today</span>
                         </div>
-                        <div class="card-value"><?php echo $total_late; ?></div>
+                        <div class="card-value" data-stat-late><?php echo $total_late; ?></div>
                         <div class="card-footer">
                             <span class="badge positive"><i class="fa-solid fa-arrow-up"></i> Live</span>
                             <span>updates tracked</span>
@@ -237,7 +238,7 @@ $total_employees_count = ($total_emp_res && $row = $total_emp_res->fetch_assoc()
                             <i class="fa-solid fa-user-minus" style="color: #ef4444;"></i>
                             <span class="card-title">Employees Absent</span>
                         </div>
-                        <div class="card-value"><?php echo $total_absent; ?></div>
+                        <div class="card-value" data-stat-absent><?php echo $total_absent; ?></div>
                         <div class="card-footer">
                             <span class="badge negative"><i class="fa-solid fa-arrow-down"></i> Live</span>
                             <span>missing checks</span>
@@ -249,9 +250,9 @@ $total_employees_count = ($total_emp_res && $row = $total_emp_res->fetch_assoc()
                             <i class="fa-solid fa-clock"></i>
                             <span class="card-title">Average Check-In Time</span>
                         </div>
-                        <div class="card-value" id="live-time-card">--:-- --</div>
+                        <div class="card-value" data-stat-avg-checkin><?php echo htmlspecialchars($avg_check_in); ?></div>
                         <div class="card-footer">
-                            <span>System active</span>
+                            <span>Today's average</span>
                         </div>
                     </div>
                 </div>
@@ -261,12 +262,30 @@ $total_employees_count = ($total_emp_res && $row = $total_emp_res->fetch_assoc()
                         <div class="table-controls">
                             <div class="table-search-box">
                                 <i class="fa-solid fa-magnifying-glass"></i>
-                                <input type="text" placeholder="Search by name, role, or employee ID">
+                                <input type="text" placeholder="Search by name, role, or employee ID" data-table-search>
                             </div>
                             
                             <div class="action-buttons-group">
                                 <button class="btn-filter"><i class="fa-solid fa-sliders"></i> Filter</button>
-                                <button class="btn-export"><i class="fa-solid fa-download"></i> Export</button>
+                                
+                                <!-- Updated Unified Export Selector Dropdown Component -->
+                                <div class="dropdown d-inline-block">
+                                    <button class="btn-export dropdown-toggle" type="button" id="exportDropdownButton" data-bs-toggle="dropdown" aria-expanded="false">
+                                        <i class="fa-solid fa-download"></i> Export
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="exportDropdownButton">
+                                        <li>
+                                            <a class="dropdown-item" href="export.php?type=employees&format=pdf">
+                                                <i class="fa-solid fa-file-pdf text-danger me-2"></i> Export as PDF
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item" href="export.php?type=employees&format=csv">
+                                                <i class="fa-solid fa-file-csv text-success me-2"></i> Export as CSV
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
                                 
                                 <button type="button" class="btn-add-employee" data-bs-toggle="modal" data-bs-target="#addEmployeeModal">
                                     <i class="fa-solid fa-plus"></i> Add Employee
@@ -287,54 +306,47 @@ $total_employees_count = ($total_emp_res && $row = $total_emp_res->fetch_assoc()
                                         <th style="width: 40px;"></th>
                                     </tr>
                                 </thead>
-                                <tbody>
-                                    <?php
-                                    $emp_list_q = "SELECT * FROM employees ORDER BY id DESC";
-                                    $emp_list_res = $conn->query($emp_list_q);
-
-                                    if ($emp_list_res && $emp_list_res->num_rows > 0) {
-                                        while($emp = $emp_list_res->fetch_assoc()) {
-                                            // Adjusted column array lookups to match Screenshot 2026-07-02 125134.png
-                                            $job_title = !empty($emp['position']) ? htmlspecialchars($emp['position']) : 'Staff';
-                                            $department = !empty($emp['department']) ? htmlspecialchars($emp['department']) : 'General';
-                                            $emp_type = !empty($emp['employment_type']) ? htmlspecialchars($emp['employment_type']) : 'Full-time';
+                                <tbody id="employee-table-body">
+                                    <?php if (!empty($employees)): ?>
+                                        <?php foreach ($employees as $emp):
+                                            $job_title = !empty($emp['position']) ? $emp['position'] : 'Staff';
+                                            $department = !empty($emp['department']) ? $emp['department'] : 'General';
+                                            $emp_type = !empty($emp['employment_type']) ? $emp['employment_type'] : 'Full-time';
                                             $status = (isset($emp['status']) && strtolower($emp['status']) === 'inactive') ? 'inactive' : 'active';
-                                            $join_date = !empty($emp['created_at']) ? date("M d, Y", strtotime($emp['created_at'])) : date("M d, Y");
-                                            $emp_id = !empty($emp['employee_id']) ? htmlspecialchars($emp['employee_id']) : 'EMP-' . str_pad($emp['id'], 3, '0', STR_PAD_LEFT);
-                                            
-                                            echo '
+                                            $join_date = !empty($emp['created_at']) ? date('M d, Y', strtotime($emp['created_at'])) : date('M d, Y');
+                                            $emp_id = !empty($emp['employee_id']) ? $emp['employee_id'] : 'EMP-' . str_pad($emp['id'], 3, '0', STR_PAD_LEFT);
+                                        ?>
                                             <tr>
                                                 <td>
                                                     <div class="profile-meta-cell">
-                                                        <img src="https://ui-avatars.com/api/?name='.urlencode($emp['name']).'&background=cbd5e1&color=334155" class="avatar-image" alt="">
+                                                        <img src="https://ui-avatars.com/api/?name=<?php echo urlencode($emp['name']); ?>&background=cbd5e1&color=334155" class="avatar-image" alt="">
                                                         <div class="profile-identity-info">
-                                                            <div class="profile-name-row">'.htmlspecialchars($emp['name']).' <i class="fa-regular fa-copy"></i></div>
-                                                            <span class="emp-id-sub">'.$emp_id.'</span>
+                                                            <div class="profile-name-row"><?php echo htmlspecialchars($emp['name']); ?> <i class="fa-regular fa-copy"></i></div>
+                                                            <span class="emp-id-sub"><?php echo htmlspecialchars($emp_id); ?></span>
                                                         </div>
                                                     </div>
                                                 </td>
-                                                <td>'.$job_title.'</td>
-                                                <td>'.$department.'</td>
-                                                <td>'.$emp_type.'</td>
-                                                <td><span class="status-pill '.$status.'">'.ucfirst($status).'</span></td>
-                                                <td>'.$join_date.'</td>
+                                                <td><?php echo htmlspecialchars($job_title); ?></td>
+                                                <td><?php echo htmlspecialchars($department); ?></td>
+                                                <td><?php echo htmlspecialchars($emp_type); ?></td>
+                                                <td><span class="status-pill <?php echo $status; ?>"><?php echo ucfirst($status); ?></span></td>
+                                                <td><?php echo $join_date; ?></td>
                                                 <td class="action-dot-menu">
                                                     <div class="dropdown action-dropdown">
-                                                        <button class="btn dropdown-toggle" type="button" id="actionMenu'.$emp['id'].'" data-bs-toggle="dropdown" aria-expanded="false">
+                                                        <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                                                             <i class="fa-solid fa-ellipsis-vertical"></i>
                                                         </button>
-                                                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="actionMenu'.$emp['id'].'">
-                                                            <li><a class="dropdown-item edit-employee-btn" href="#" data-bs-toggle="modal" data-bs-target="#editEmployeeModal" data-id="'.$emp['id'].'" data-employee_id="'.htmlspecialchars($emp['employee_id']).'" data-name="'.htmlspecialchars($emp['name']).'" data-position="'.htmlspecialchars($job_title).'" data-department="'.htmlspecialchars($department).'" data-status="'.ucfirst($status).'"><i class="fa-solid fa-pen me-2"></i>Edit</a></li>
-                                                            <li><a class="dropdown-item text-danger delete-employee-btn" href="#" data-id="'.$emp['id'].'"><i class="fa-solid fa-trash me-2"></i>Delete</a></li>
+                                                        <ul class="dropdown-menu dropdown-menu-end">
+                                                            <li><a class="dropdown-item edit-employee-btn" href="#" data-bs-toggle="modal" data-bs-target="#editEmployeeModal" data-id="<?php echo (int) $emp['id']; ?>" data-employee_id="<?php echo htmlspecialchars($emp['employee_id']); ?>" data-name="<?php echo htmlspecialchars($emp['name']); ?>" data-position="<?php echo htmlspecialchars($job_title); ?>" data-department="<?php echo htmlspecialchars($department); ?>" data-status="<?php echo ucfirst($status); ?>"><i class="fa-solid fa-pen me-2"></i>Edit</a></li>
+                                                            <li><a class="dropdown-item text-danger delete-employee-btn" href="#" data-id="<?php echo (int) $emp['id']; ?>"><i class="fa-solid fa-trash me-2"></i>Delete</a></li>
                                                         </ul>
                                                     </div>
                                                 </td>
-                                            </tr>';
-                                        }
-                                    } else {
-                                        echo '<tr><td colspan="7" style="text-align:center; padding: 30px; color:#64748b;">No employees registered in the system.</td></tr>';
-                                    }
-                                    ?>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    <?php else: ?>
+                                        <tr><td colspan="7" style="text-align:center; padding: 30px; color:#64748b;">No employees registered in the system.</td></tr>
+                                    <?php endif; ?>
                                 </tbody>
                             </table>
                         </div>
@@ -374,7 +386,7 @@ $total_employees_count = ($total_emp_res && $row = $total_emp_res->fetch_assoc()
                     <h5 class="modal-title" id="addEmployeeModalLabel" style="font-weight:600; color:#0f172a;">Add New Employee</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <form action="add_employee_process.php" method="POST">
+                <form id="addEmployeeForm">
                     <div class="modal-body">
                         <div class="mb-3">
                             <label for="emp_name" class="form-label">Full Name</label>
@@ -424,7 +436,7 @@ $total_employees_count = ($total_emp_res && $row = $total_emp_res->fetch_assoc()
                     <h5 class="modal-title" id="editEmployeeModalLabel" style="font-weight:600; color:#0f172a;">Edit Employee</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <form action="edit_employee_process.php" method="POST">
+                <form id="editEmployeeForm">
                     <div class="modal-body">
                         <input type="hidden" id="edit_id" name="id">
                         <div class="mb-3">
@@ -467,70 +479,145 @@ $total_employees_count = ($total_emp_res && $row = $total_emp_res->fetch_assoc()
     </div>
 
     <script src="bootstrap-5.3.5-dist/js/bootstrap.bundle.min.js"></script>
+    <script src="assets/js/app.js"></script>
     <script>
-        document.addEventListener("DOMContentLoaded", function() {
-            const toggleSidebarBtn = document.getElementById('toggleSidebarBtn');
-            toggleSidebarBtn.addEventListener('click', function() {
-                const isMinimized = document.documentElement.classList.toggle('sidebar-minimized');
-                localStorage.setItem('sidebarMinimized', isMinimized);
-            });
+        document.addEventListener('DOMContentLoaded', function() {
+            const addForm = document.getElementById('addEmployeeForm');
+            const editForm = document.getElementById('editEmployeeForm');
+            const addModal = document.getElementById('addEmployeeModal');
+            const editModal = document.getElementById('editEmployeeModal');
+            const addModalInstance = addModal ? bootstrap.Modal.getOrCreateInstance(addModal) : null;
+            const editModalInstance = editModal ? bootstrap.Modal.getOrCreateInstance(editModal) : null;
 
-            function updateLiveTimeCard() {
-                const now = new Date();
-                let hours = now.getHours(); let minutes = now.getMinutes();
-                const ampm = hours >= 12 ? 'PM' : 'AM';
-                hours = hours % 12; hours = hours ? hours : 12;
-                minutes = minutes < 10 ? '0' + minutes : minutes;
-                hours = hours < 10 ? '0' + hours : hours;
-                document.getElementById('live-time-card').innerText = `${hours}:${minutes} ${ampm}`;
-            }
-            updateLiveTimeCard(); setInterval(updateLiveTimeCard, 1000);
-        });
-    </script>
-    <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        var editModalEl = document.getElementById('editEmployeeModal');
-        if (editModalEl) {
-            editModalEl.addEventListener('show.bs.modal', function (event) {
-                var button = event.relatedTarget;
-                if (!button) return;
-                var id = button.getAttribute('data-id') || '';
-                var employee_id = button.getAttribute('data-employee_id') || '';
-                var name = button.getAttribute('data-name') || '';
-                var position = button.getAttribute('data-position') || '';
-                var department = button.getAttribute('data-department') || '';
-                var status = button.getAttribute('data-status') || 'Active';
+            async function loadEmployees(search = '') {
+                const response = await KiwiApp.request('employee_list', { search, limit: 100, offset: 0 }, 'GET');
+                if (response.status !== 'success') return;
 
-                document.getElementById('edit_id').value = id;
-                document.getElementById('edit_emp_id').value = employee_id;
-                document.getElementById('edit_emp_name').value = name;
-                document.getElementById('edit_emp_title').value = position;
-                document.getElementById('edit_emp_dept').value = department;
-                document.getElementById('edit_emp_status').value = status;
-            });
-        }
+                const tbody = document.getElementById('employee-table-body');
+                if (!tbody) return;
 
-        document.querySelectorAll('.delete-employee-btn').forEach(function(btn) {
-            btn.addEventListener('click', function(e) {
-                e.preventDefault();
-                var id = this.getAttribute('data-id');
-                if (!id) return;
-                if (confirm('Delete this employee? This cannot be undone.')) {
-                    var form = document.createElement('form');
-                    form.method = 'POST';
-                    form.action = 'delete_employee_process.php';
-                    var input = document.createElement('input');
-                    input.type = 'hidden';
-                    input.name = 'id';
-                    input.value = id;
-                    form.appendChild(input);
-                    document.body.appendChild(form);
-                    form.submit();
+                if (!response.data.length) {
+                    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 30px; color:#64748b;">No employees registered in the system.</td></tr>';
+                    return;
                 }
+
+                tbody.innerHTML = response.data.map((emp) => {
+                    const jobTitle = emp.position || 'Staff';
+                    const department = emp.department || 'General';
+                    const empType = emp.employment_type || 'Full-time';
+                    const status = (emp.status || '').toLowerCase() === 'inactive' ? 'inactive' : 'active';
+                    const joinDate = emp.created_at ? new Date(emp.created_at).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : '';
+                    const empId = emp.employee_id || `EMP-${String(emp.id).padStart(3, '0')}`;
+
+                    return `
+                        <tr>
+                            <td>
+                                <div class="profile-meta-cell">
+                                    <img src="https://ui-avatars.com/api/?name=${encodeURIComponent(emp.name)}&background=cbd5e1&color=334155" class="avatar-image" alt="">
+                                    <div class="profile-identity-info">
+                                        <div class="profile-name-row">${KiwiApp.escapeHtml(emp.name)} <i class="fa-regular fa-copy"></i></div>
+                                        <span class="emp-id-sub">${KiwiApp.escapeHtml(empId)}</span>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>${KiwiApp.escapeHtml(jobTitle)}</td>
+                            <td>${KiwiApp.escapeHtml(department)}</td>
+                            <td>${KiwiApp.escapeHtml(empType)}</td>
+                            <td><span class="status-pill ${status}">${status.charAt(0).toUpperCase() + status.slice(1)}</span></td>
+                            <td>${joinDate}</td>
+                            <td class="action-dot-menu">
+                                <div class="dropdown action-dropdown">
+                                    <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                        <i class="fa-solid fa-ellipsis-vertical"></i>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end">
+                                        <li><a class="dropdown-item edit-employee-btn" href="#" data-bs-toggle="modal" data-bs-target="#editEmployeeModal" data-id="${emp.id}" data-employee_id="${KiwiApp.escapeHtml(emp.employee_id || '')}" data-name="${KiwiApp.escapeHtml(emp.name)}" data-position="${KiwiApp.escapeHtml(jobTitle)}" data-department="${KiwiApp.escapeHtml(department)}" data-status="${status.charAt(0).toUpperCase() + status.slice(1)}"><i class="fa-solid fa-pen me-2"></i>Edit</a></li>
+                                        <li><a class="dropdown-item text-danger delete-employee-btn" href="#" data-id="${emp.id}"><i class="fa-solid fa-trash me-2"></i>Delete</a></li>
+                                    </ul>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+
+                bindEmployeeActions();
+            }
+
+            function bindEmployeeActions() {
+                document.querySelectorAll('.delete-employee-btn').forEach((btn) => {
+                    btn.addEventListener('click', async (event) => {
+                        event.preventDefault();
+                        const id = btn.getAttribute('data-id');
+                        if (!id || !confirm('Delete this employee? This cannot be undone.')) return;
+                        const response = await KiwiApp.request('employee_delete', { id: Number(id) });
+                        if (response.status === 'success') {
+                            KiwiApp.showToast('Employee deleted.');
+                            loadEmployees(document.querySelector('[data-table-search]')?.value.trim() || '');
+                            const stats = await KiwiApp.request('dashboard_stats', {}, 'GET');
+                            if (stats.status === 'success') KiwiApp.updateMetricCards(stats.data);
+                        } else {
+                            KiwiApp.showToast(response.message || 'Delete failed.', true);
+                        }
+                    });
+                });
+            }
+
+            KiwiApp.bindTableSearch(loadEmployees);
+
+            if (addForm) {
+                addForm.addEventListener('submit', async (event) => {
+                    event.preventDefault();
+                    const payload = Object.fromEntries(new FormData(addForm).entries());
+                    const response = await KiwiApp.request('employee_create', payload);
+                    if (response.status === 'success') {
+                        KiwiApp.showToast('Employee created.');
+                        addForm.reset();
+                        addModalInstance?.hide();
+                        loadEmployees();
+                        const stats = await KiwiApp.request('dashboard_stats', {}, 'GET');
+                        if (stats.status === 'success') KiwiApp.updateMetricCards(stats.data);
+                    } else {
+                        KiwiApp.showToast(response.message || 'Create failed.', true);
+                    }
+                });
+            }
+
+            if (editForm) {
+                editForm.addEventListener('submit', async (event) => {
+                    event.preventDefault();
+                    const payload = Object.fromEntries(new FormData(editForm).entries());
+                    payload.id = Number(payload.id);
+                    const response = await KiwiApp.request('employee_update', payload);
+                    if (response.status === 'success') {
+                        KiwiApp.showToast('Employee updated.');
+                        editModalInstance?.hide();
+                        loadEmployees(document.querySelector('[data-table-search]')?.value.trim() || '');
+                    } else {
+                        KiwiApp.showToast(response.message || 'Update failed.', true);
+                    }
+                });
+            }
+
+            if (editModal) {
+                editModal.addEventListener('show.bs.modal', function(event) {
+                    const button = event.relatedTarget;
+                    if (!button) return;
+                    document.getElementById('edit_id').value = button.getAttribute('data-id') || '';
+                    document.getElementById('edit_emp_id').value = button.getAttribute('data-employee_id') || '';
+                    document.getElementById('edit_emp_name').value = button.getAttribute('data-name') || '';
+                    document.getElementById('edit_emp_title').value = button.getAttribute('data-position') || '';
+                    document.getElementById('edit_emp_dept').value = button.getAttribute('data-department') || '';
+                    document.getElementById('edit_emp_status').value = button.getAttribute('data-status') || 'Active';
+                });
+            }
+
+            bindEmployeeActions();
+
+            KiwiApp.request('dashboard_stats', {}, 'GET').then((response) => {
+                if (response.status === 'success') KiwiApp.updateMetricCards(response.data);
             });
         });
-    });
     </script>
 </body>
 </html> 
-<?php $conn->close(); ?>    
+<?php $conn->close(); ?>

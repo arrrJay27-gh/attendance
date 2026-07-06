@@ -1,3 +1,13 @@
+<?php
+require_once 'auth.php';
+require_once 'database.php';
+require_once 'class/Leave.php';
+
+$database = new Database();
+$conn = $database->getConnection();
+$leaveService = new Leave($conn);
+$leaveRows = $leaveService->getAll('', '', 100, 0);
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,7 +16,7 @@
     <title>Employees Leave List - Kiwi Digital</title>
     
     <!-- Local Bootstrap File Link -->
-    <link rel="stylesheet" href="bootstrap.min.css">
+    <link rel="stylesheet" href="bootstrap-5.3.5-dist/css/bootstrap.min.css">
 
     <!-- Font Awesome 6 CDN Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
@@ -242,7 +252,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 24px;
+            margin-bottom: 20px;
             flex-shrink: 0;
         }
 
@@ -269,6 +279,79 @@
             display: flex;
             align-items: center;
             gap: 12px;
+        }
+
+        /* Filter Row Styles */
+        .filter-row-container {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            flex-shrink: 0;
+        }
+
+        .filter-search-input-wrap {
+            position: relative;
+            flex-grow: 1;
+            min-width: 240px;
+        }
+
+        .filter-search-input-wrap i {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94a3b8;
+            font-size: 14px;
+        }
+
+        .filter-search-field {
+            width: 100%;
+            padding: 8px 14px 8px 38px;
+            border-radius: 10px;
+            border: 1px solid #e2e8f0;
+            font-size: 13px;
+            outline: none;
+            color: #334155;
+            height: 38px;
+        }
+
+        .filter-dropdown-select {
+            padding: 8px 14px;
+            border-radius: 10px;
+            border: 1px solid #e2e8f0;
+            background-color: #ffffff;
+            font-size: 13px;
+            color: #475569;
+            outline: none;
+            min-width: 150px;
+            height: 38px;
+            cursor: pointer;
+        }
+
+        /* Unified Export Dropdown Styling matched to employee.php */
+        .export-dropdown-wrapper {
+            position: relative;
+            display: inline-block;
+        }
+
+        .btn-export-trigger {
+            background-color: #ffffff;
+            color: #475569;
+            border: 1px solid #e2e8f0;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            height: 38px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-export-trigger:hover {
+            background-color: #f8fafc;
         }
 
         .view-toggle-btn {
@@ -450,7 +533,7 @@
 </head>
 <body>
 
-    <div class="app-container">
+    <div class="app-container" id="appContainer">
         
         <?php
         $activePage = 'leave';
@@ -460,14 +543,14 @@
             ['id' => 'employee',    'href' => 'employee.php',    'icon' => 'fa-users-rectangle',         'label' => 'Employee'],
             ['id' => 'biometric',   'href' => '#',               'icon' => 'fa-fingerprint',             'label' => 'Biometric Enrollment'],
             ['id' => 'timekeeping', 'href' => 'timekeeping.php', 'icon' => 'fa-clipboard-user',          'label' => 'Timekeeping'],
-            ['id' => 'shift',       'href' => '#',               'icon' => 'fa-right-left',              'label' => 'Shift Configuration'],
+            ['id' => 'shift',       'href' => 'shift_management.php',               'icon' => 'fa-right-left',              'label' => 'Shift Configuration'],
             ['id' => 'leave',       'href' => 'leave.php',       'icon' => 'fa-user-gear',               'label' => 'Leave Management'],
             ['id' => 'internship',  'href' => '#',               'icon' => 'fa-cubes',                   'label' => 'Internship Registry'],
             ['id' => 'audit',       'href' => '#',               'icon' => 'fa-square-poll-horizontal',  'label' => 'System Audit'],
         ];
         ?>
 
-        <!-- EXACT INDEX SIDEBAR EMBED -->
+        <!-- SIDEBAR CONTAINER -->
         <nav class="sidebar" id="sidebarContainer">
             <div class="sidebar-header">
                 <div class="logo-container">
@@ -506,10 +589,47 @@
                         <h1 class="panel-heading-text">Employees Leave List</h1>
                     </div>
                     <div class="panel-actions-side">
-                        <button class="view-toggle-btn active"><i class="fa-solid fa-list"></i></button>
-                        <button class="view-toggle-btn"><i class="fa-solid fa-grip"></i></button>
-                        <button class="btn-approve-all">Approve All</button>
+                        <!-- Dropdown Setup -->
+                        <div class="dropdown export-dropdown-wrapper">
+                            <button class="btn btn-export-trigger dropdown-toggle" type="button" id="exportMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fa-solid fa-download"></i> Export
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="exportMenuButton">
+                                <li>
+                                    <button class="dropdown-item btn-export" data-export-type="leave" data-export-format="csv">
+                                        <i class="fa-solid fa-file-csv me-2 text-success"></i> Export as CSV
+                                    </button>
+                                </li>
+                                <li>
+                                    <button class="dropdown-item btn-export" data-export-type="leave" data-export-format="pdf">
+                                        <i class="fa-solid fa-file-pdf me-2 text-danger"></i> Export as PDF
+                                    </button>
+                                </li>
+                            </ul>
+                        </div>
+                        
+                        <button class="btn-approve-all" id="approve-all-leave">Approve All</button>
                     </div>
+                </div>
+
+                <!-- SEARCH & FILTER INTERACTION PANEL -->
+                <div class="filter-row-container">
+                    <div class="filter-search-input-wrap">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <input type="text" id="filter-search-name" class="filter-search-field" placeholder="Search employee by name...">
+                    </div>
+                    <select id="filter-leave-type" class="filter-dropdown-select">
+                        <option value="">All Leave Types</option>
+                        <option value="Sick Leave">Sick Leave</option>
+                        <option value="Vacation Leave">Vacation Leave</option>
+                        <option value="Emergency Leave">Emergency Leave</option>
+                    </select>
+                    <select id="filter-leave-status" class="filter-dropdown-select">
+                        <option value="">All Statuses</option>
+                        <option value="Pending">Pending</option>
+                        <option value="Approved">Approved</option>
+                        <option value="Rejected">Rejected</option>
+                    </select>
                 </div>
 
                 <div class="table-responsive-wrapper">
@@ -526,160 +646,40 @@
                                 <th style="text-align: center;">Action <i class="fa-solid fa-sort"></i></th>
                             </tr>
                         </thead>
-                        <tbody>
-                            <!-- Row 1: Pending -->
-                            <tr>
-                                <td>
-                                    <div class="emp-profile-block">
-                                        <div class="emp-avatar"></div>
-                                        <span>Samantha Paul</span>
-                                    </div>
-                                </td>
-                                <td class="designation-text">Sr. UI Developer</td>
-                                <td class="leave-type-text">Sick Leave</td>
-                                <td class="reason-truncate-cell">To support my spouse and care...</td>
-                                <td class="date-log-text">July 10,2025</td>
-                                <td class="date-log-text">July 12,2025</td>
-                                <td class="days-count-badge">2</td>
-                                <td>
-                                    <div class="action-flex-box justify-content-center">
-                                        <button class="btn-action-approve"><i class="fa-solid fa-check"></i> Approve</button>
-                                        <button class="btn-action-reject-cross"><i class="fa-solid fa-xmark"></i></button>
-                                    </div>
-                                </td>
-                            </tr>
-                            <!-- Row 2: Approved -->
-                            <tr>
-                                <td>
-                                    <div class="emp-profile-block">
-                                        <div class="emp-avatar"></div>
-                                        <span>Gray Noal</span>
-                                    </div>
-                                </td>
-                                <td class="designation-text">React Developer</td>
-                                <td class="leave-type-text">Casual Leave</td>
-                                <td class="reason-truncate-cell">Attending a family function out...</td>
-                                <td class="date-log-text">July 14,2025</td>
-                                <td class="date-log-text">July 30,2025</td>
-                                <td class="days-count-badge">15</td>
-                                <td style="text-align: center;">
-                                    <span class="status-outcome-badge approved">Approved</span>
-                                </td>
-                            </tr>
-                            <!-- Row 3: Rejected -->
-                            <tr>
-                                <td>
-                                    <div class="emp-profile-block">
-                                        <div class="emp-avatar"></div>
-                                        <span>Cameron Williamson</span>
-                                    </div>
-                                </td>
-                                <td class="designation-text">Team Lead</td>
-                                <td class="leave-type-text">Personal Leave</td>
-                                <td class="reason-truncate-cell">Need time off to manage some...</td>
-                                <td class="date-log-text">July 06,2025</td>
-                                <td class="date-log-text">July 16,2025</td>
-                                <td class="days-count-badge">10</td>
-                                <td style="text-align: center;">
-                                    <span class="status-outcome-badge rejected">Rejected</span>
-                                </td>
-                            </tr>
-                            <!-- Row 4: Rejected -->
-                            <tr>
-                                <td>
-                                    <div class="emp-profile-block">
-                                        <div class="emp-avatar"></div>
-                                        <span>Ralph Edwards</span>
-                                    </div>
-                                </td>
-                                <td class="designation-text">Full Stack Developer</td>
-                                <td class="leave-type-text">Maternity Leave</td>
-                                <td class="reason-truncate-cell">Starting maternity leave as per...</td>
-                                <td class="date-log-text">July 02,2025</td>
-                                <td class="date-log-text">July 06,2025</td>
-                                <td class="days-count-badge">4</td>
-                                <td style="text-align: center;">
-                                    <span class="status-outcome-badge rejected">Rejected</span>
-                                </td>
-                            </tr>
-                            <!-- Row 5: Approved -->
-                            <tr>
-                                <td>
-                                    <div class="emp-profile-block">
-                                        <div class="emp-avatar"></div>
-                                        <span>Annette Black</span>
-                                    </div>
-                                </td>
-                                <td class="designation-text">Jr. Java Developer</td>
-                                <td class="leave-type-text">Gifted Leave</td>
-                                <td class="reason-truncate-cell">Team leave gifted by managem...</td>
-                                <td class="date-log-text">August 26,2025</td>
-                                <td class="date-log-text">August 30,2025</td>
-                                <td class="days-count-badge">4</td>
-                                <td style="text-align: center;">
-                                    <span class="status-outcome-badge approved">Approved</span>
-                                </td>
-                            </tr>
-                            <!-- Row 6: Pending -->
-                            <tr>
-                                <td>
-                                    <div class="emp-profile-block">
-                                        <div class="emp-avatar"></div>
-                                        <span>Marvin McKinney</span>
-                                    </div>
-                                </td>
-                                <td class="designation-text">Sr. UI Developer</td>
-                                <td class="leave-type-text">Sick Leave</td>
-                                <td class="reason-truncate-cell">Welcoming our second child an...</td>
-                                <td class="date-log-text">August 05,2025</td>
-                                <td class="date-log-text">August 06,2025</td>
-                                <td class="days-count-badge">1</td>
-                                <td>
-                                    <div class="action-flex-box justify-content-center">
-                                        <button class="btn-action-approve"><i class="fa-solid fa-check"></i> Approve</button>
-                                        <button class="btn-action-reject-cross"><i class="fa-solid fa-xmark"></i></button>
-                                    </div>
-                                </td>
-                            </tr>
-                            <!-- Row 7: Pending -->
-                            <tr>
-                                <td>
-                                    <div class="emp-profile-block">
-                                        <div class="emp-avatar"></div>
-                                        <span>Theresa Webb</span>
-                                    </div>
-                                </td>
-                                <td class="designation-text">React Developer</td>
-                                <td class="leave-type-text">Casual Leave</td>
-                                <td class="reason-truncate-cell">Traveling for a friend's wedding.</td>
-                                <td class="date-log-text">August 14,2025</td>
-                                <td class="date-log-text">August 16,2025</td>
-                                <td class="days-count-badge">2</td>
-                                <td>
-                                    <div class="action-flex-box justify-content-center">
-                                        <button class="btn-action-approve"><i class="fa-solid fa-check"></i> Approve</button>
-                                        <button class="btn-action-reject-cross"><i class="fa-solid fa-xmark"></i></button>
-                                    </div>
-                                </td>
-                            </tr>
-                            <!-- Row 8: Approved -->
-                            <tr>
-                                <td>
-                                    <div class="emp-profile-block">
-                                        <div class="emp-avatar"></div>
-                                        <span>Arlene McCoy</span>
-                                    </div>
-                                </td>
-                                <td class="designation-text">Business Analyst</td>
-                                <td class="leave-type-text">Personal Leave</td>
-                                <td class="reason-truncate-cell">Taking a day off to accompany...</td>
-                                <td class="date-log-text">August 02,2025</td>
-                                <td class="date-log-text">August 12,2025</td>
-                                <td class="days-count-badge">10</td>
-                                <td style="text-align: center;">
-                                    <span class="status-outcome-badge approved">Approved</span>
-                                </td>
-                            </tr>
+                        <tbody id="leave-table-body">
+                            <?php if (!empty($leaveRows)): ?>
+                                <?php foreach ($leaveRows as $leave): ?>
+                                    <tr data-leave-id="<?php echo (int) $leave['id']; ?>" 
+                                        data-emp-name="<?php echo htmlspecialchars(strtolower($leave['employee_name'])); ?>"
+                                        data-type="<?php echo htmlspecialchars($leave['leave_type']); ?>"
+                                        data-status="<?php echo htmlspecialchars($leave['status']); ?>">
+                                        <td>
+                                            <div class="emp-profile-block">
+                                                <div class="emp-avatar"></div>
+                                                <span><?php echo htmlspecialchars($leave['employee_name']); ?></span>
+                                            </div>
+                                        </td>
+                                        <td class="designation-text"><?php echo htmlspecialchars($leave['designation']); ?></td>
+                                        <td class="leave-type-text"><?php echo htmlspecialchars($leave['leave_type']); ?></td>
+                                        <td class="reason-truncate-cell"><?php echo htmlspecialchars($leave['reason']); ?></td>
+                                        <td class="date-log-text"><?php echo date('F d, Y', strtotime($leave['start_date'])); ?></td>
+                                        <td class="date-log-text"><?php echo date('F d, Y', strtotime($leave['end_date'])); ?></td>
+                                        <td class="days-count-badge"><?php echo (int) $leave['days']; ?></td>
+                                        <td style="text-align: center;">
+                                            <?php if ($leave['status'] === 'Pending'): ?>
+                                                <div class="action-flex-box justify-content-center">
+                                                    <button class="btn-action-approve leave-approve-btn" data-id="<?php echo (int) $leave['id']; ?>"><i class="fa-solid fa-check"></i> Approve</button>
+                                                    <button class="btn-action-reject-cross leave-reject-btn" data-id="<?php echo (int) $leave['id']; ?>"><i class="fa-solid fa-xmark"></i></button>
+                                                </div>
+                                            <?php else: ?>
+                                                <span class="status-outcome-badge <?php echo strtolower($leave['status']); ?>"><?php echo htmlspecialchars($leave['status']); ?></span>
+                                            <?php endif; ?>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <tr><td colspan="8" style="text-align:center; padding:30px; color:#64748b;">No leave requests found.</td></tr>
+                            <?php endif; ?>
                         </tbody>
                     </table>
                 </div>
@@ -687,14 +687,186 @@
         </main>
     </div>
 
-    <!-- Toggle Script handler matching index.php -->
+    <!-- Bootstrap Core JS Bundle with Popper for Dropdowns -->
+    <script src="bootstrap-5.3.5-dist/js/bootstrap.bundle.min.js"></script>
+    <script src="assets/js/app.js"></script>
     <script>
-        document.addEventListener("DOMContentLoaded", function() {
+        document.addEventListener('DOMContentLoaded', function() {
+            // 1. FIXED & ISOLATED SIDEBAR TOGGLE MECHANIC (Guaranteed to execute first)
             const toggleSidebarBtn = document.getElementById('toggleSidebarBtn');
-            toggleSidebarBtn.addEventListener('click', function() {
-                const isMinimized = document.documentElement.classList.toggle('sidebar-minimized');
-                localStorage.setItem('sidebarMinimized', isMinimized);
+            if (toggleSidebarBtn) {
+                toggleSidebarBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const isMinimized = document.documentElement.classList.toggle('sidebar-minimized');
+                    localStorage.setItem('sidebarMinimized', isMinimized);
+                });
+            }
+
+            // 2. SEARCH & FILTERING CORE LOGIC
+            const searchNameInput = document.getElementById('filter-search-name');
+            const selectTypeDropdown = document.getElementById('filter-leave-type');
+            const selectStatusDropdown = document.getElementById('filter-leave-status');
+
+            function performRowFiltering() {
+                if (!searchNameInput || !selectTypeDropdown || !selectStatusDropdown) return;
+                
+                const searchVal = searchNameInput.value.toLowerCase().trim();
+                const typeVal = selectTypeDropdown.value;
+                const statusVal = selectStatusDropdown.value;
+                const rows = document.querySelectorAll('#leave-table-body tr[data-leave-id]');
+                
+                let visibleCount = 0;
+
+                rows.forEach(row => {
+                    const rowName = row.getAttribute('data-emp-name') || '';
+                    const rowType = row.getAttribute('data-type') || '';
+                    const rowStatus = row.getAttribute('data-status') || '';
+
+                    const matchesName = !searchVal || rowName.includes(searchVal);
+                    const matchesType = !typeVal || rowType === typeVal;
+                    const matchesStatus = !statusVal || rowStatus === statusVal;
+
+                    if (matchesName && matchesType && matchesStatus) {
+                        row.style.display = '';
+                        visibleCount++;
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+
+                let emptyRow = document.getElementById('filter-empty-fallback-row');
+                if (visibleCount === 0) {
+                    if (!emptyRow) {
+                        emptyRow = document.createElement('tr');
+                        emptyRow.id = 'filter-empty-fallback-row';
+                        emptyRow.innerHTML = '<td colspan="8" style="text-align:center; padding:30px; color:#64748b;">No matching leave records found.</td>';
+                        document.getElementById('leave-table-body').appendChild(emptyRow);
+                    }
+                } else if (emptyRow) {
+                    emptyRow.remove();
+                }
+            }
+
+            if (searchNameInput) searchNameInput.addEventListener('input', performRowFiltering);
+            if (selectTypeDropdown) selectTypeDropdown.addEventListener('change', performRowFiltering);
+            if (selectStatusDropdown) selectStatusDropdown.addEventListener('change', performRowFiltering);
+
+            // 3. ASYNCHRONOUS DATA LAYERING SAFELY WRAPPED IN TRY/CATCH
+            async function loadLeaveRows() {
+                try {
+                    if (typeof KiwiApp === 'undefined' || !KiwiApp.request) return;
+                    
+                    const response = await KiwiApp.request('leave_list', {}, 'GET');
+                    if (!response || response.status !== 'success') return;
+
+                    const tbody = document.getElementById('leave-table-body');
+                    if (!tbody) return;
+
+                    if (!response.data || !response.data.length) {
+                        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:30px; color:#64748b;">No leave requests found.</td></tr>';
+                        return;
+                    }
+
+                    tbody.innerHTML = response.data.map((leave) => {
+                        const startDate = new Date(leave.start_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+                        const endDate = new Date(leave.end_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+                        const actionCell = leave.status === 'Pending'
+                            ? `<div class="action-flex-box justify-content-center">
+                                   <button class="btn-action-approve leave-approve-btn" data-id="${leave.id}"><i class="fa-solid fa-check"></i> Approve</button>
+                                   <button class="btn-action-reject-cross leave-reject-btn" data-id="${leave.id}"><i class="fa-solid fa-xmark"></i></button>
+                               </div>`
+                            : `<span class="status-outcome-badge ${leave.status.toLowerCase()}">${typeof KiwiApp.escapeHtml === 'function' ? KiwiApp.escapeHtml(leave.status) : leave.status}</span>`;
+
+                        const cleanName = leave.employee_name ? leave.employee_name.toLowerCase() : '';
+                        const escName = typeof KiwiApp.escapeHtml === 'function' ? KiwiApp.escapeHtml(leave.employee_name) : leave.employee_name;
+                        const escDesignation = typeof KiwiApp.escapeHtml === 'function' ? KiwiApp.escapeHtml(leave.designation) : leave.designation;
+                        const escType = typeof KiwiApp.escapeHtml === 'function' ? KiwiApp.escapeHtml(leave.leave_type) : leave.leave_type;
+                        const escReason = typeof KiwiApp.escapeHtml === 'function' ? KiwiApp.escapeHtml(leave.reason) : leave.reason;
+
+                        return `
+                            <tr data-leave-id="${leave.id}" 
+                                data-emp-name="${cleanName}"
+                                data-type="${escType}"
+                                data-status="${leave.status}">
+                                <td><div class="emp-profile-block"><div class="emp-avatar"></div><span>${escName}</span></div></td>
+                                <td class="designation-text">${escDesignation}</td>
+                                <td class="leave-type-text">${escType}</td>
+                                <td class="reason-truncate-cell">${escReason}</td>
+                                <td class="date-log-text">${startDate}</td>
+                                <td class="date-log-text">${endDate}</td>
+                                <td class="days-count-badge">${leave.days}</td>
+                                <td style="text-align:center;">${actionCell}</td>
+                            </tr>
+                        `;
+                    }).join('');
+
+                    bindLeaveActions();
+                    performRowFiltering();
+                } catch (error) {
+                    console.error("Dynamic table render skipped or blocked:", error);
+                }
+            }
+
+            async function updateLeaveStatus(id, status) {
+                try {
+                    const response = await KiwiApp.request('leave_update_status', { id, status });
+                    if (response && response.status === 'success') {
+                        if (typeof KiwiApp.showToast === 'function') KiwiApp.showToast(`Leave ${status.toLowerCase()}.`);
+                        loadLeaveRows();
+                    } else {
+                        if (typeof KiwiApp.showToast === 'function') KiwiApp.showToast(response.message || 'Update failed.', true);
+                    }
+                } catch (err) {
+                    console.error(err);
+                }
+            }
+
+            function bindLeaveActions() {
+                document.querySelectorAll('.leave-approve-btn').forEach((btn) => {
+                    btn.replaceWith(btn.cloneNode(true)); // Clear tracking duplicates safely
+                });
+                document.querySelectorAll('.leave-reject-btn').forEach((btn) => {
+                    btn.replaceWith(btn.cloneNode(true));
+                });
+                
+                document.querySelectorAll('.leave-approve-btn').forEach((btn) => {
+                    btn.addEventListener('click', () => updateLeaveStatus(Number(btn.dataset.id), 'Approved'));
+                });
+                document.querySelectorAll('.leave-reject-btn').forEach((btn) => {
+                    btn.addEventListener('click', () => updateLeaveStatus(Number(btn.dataset.id), 'Rejected'));
+                });
+            }
+
+            document.getElementById('approve-all-leave')?.addEventListener('click', async () => {
+                try {
+                    const response = await KiwiApp.request('leave_approve_all', {});
+                    if (response && response.status === 'success') {
+                        if (typeof KiwiApp.showToast === 'function') KiwiApp.showToast('All pending leave requests approved.');
+                        loadLeaveRows();
+                    } else {
+                        if (typeof KiwiApp.showToast === 'function') KiwiApp.showToast(response.message || 'Approve all failed.', true);
+                    }
+                } catch(e) {}
             });
+
+            document.querySelectorAll('.btn-export').forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    e.preventDefault(); 
+                    const type = this.getAttribute('data-export-type');
+                    const format = this.getAttribute('data-export-format');
+                    
+                    if (typeof KiwiApp !== 'undefined' && typeof KiwiApp.exportData === 'function') {
+                        KiwiApp.exportData(type, format);
+                    } else {
+                        if (typeof KiwiApp.showToast === 'function') KiwiApp.showToast(`Exporting ${type} report to ${format.toUpperCase()}...`);
+                    }
+                });
+            });
+
+            // Initialize actions for static server rows right away
+            bindLeaveActions();
+            // Fire API loader gracefully without halting core window layout buttons
+            loadLeaveRows();
         });
     </script>
 </body>

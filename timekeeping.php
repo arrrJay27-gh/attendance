@@ -1,57 +1,24 @@
-<?php 
+<?php
 require_once 'auth.php';
-$activePage = 'timekeeping'; // Keeps the Timekeeping tab highlighted cleanly
+$activePage = 'timekeeping';
 
-// 1. Establish OOP MySQLi Connection
-$servername = "localhost";
-$username = "root";
-$password = "";
-$dbname = "attendance_kiwi"; // Replace with your actual database name
+require_once 'database.php';
+require_once 'class/Dashboard.php';
+require_once 'class/Attendance.php';
 
-$conn = new mysqli($servername, $username, $password, $dbname);
+$database = new Database();
+$conn = $database->getConnection();
+$dashboard = new Dashboard($conn);
+$attendanceService = new Attendance($conn);
 
-// Check connection
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
-
-// Get Today's Date dynamically for accurate metrics calculation
 $today = date('Y-m-d');
-
-// --- METRIC CARD 1: Total Employees Present Today ---
-$sqlPresent = "SELECT COUNT(DISTINCT employee_name) as total FROM timekeeping_table WHERE date_record = '$today' AND status = 'Present'";
-$resPresent = $conn->query($sqlPresent);
-$presentCount = ($resPresent && $row = $resPresent->fetch_assoc()) ? $row['total'] : 0;
-
-// --- METRIC CARD 2: Late Arrivals Today ---
-$sqlLate = "SELECT COUNT(DISTINCT employee_name) as total FROM timekeeping_table WHERE date_record = '$today' AND status = 'Late'";
-$resLate = $conn->query($sqlLate);
-$lateCount = ($resLate && $row = $resLate->fetch_assoc()) ? $row['total'] : 0;
-
-// --- METRIC CARD 3: Employees Absent Today ---
-$sqlAbsent = "SELECT COUNT(DISTINCT employee_name) as total FROM timekeeping_table WHERE date_record = '$today' AND status = 'Absent'";
-$resAbsent = $conn->query($sqlAbsent);
-$absentCount = ($resAbsent && $row = $resAbsent->fetch_assoc()) ? $row['total'] : 0;
-
-// --- METRIC CARD 4: Average Check-In Time Today ---
-$sqlAvgTime = "SELECT SEC_TO_TIME(AVG(TIME_TO_SEC(time_in))) as avg_time FROM timekeeping_table WHERE date_record = '$today' AND time_in IS NOT NULL AND time_in != '00:00:00'";
-$resAvgTime = $conn->query($sqlAvgTime);
-$avgTimeValue = "--:-- --";
-if ($resAvgTime && $row = $resAvgTime->fetch_assoc()) {
-    if (!empty($row['avg_time'])) {
-        $avgTimeValue = date("h:i A", strtotime($row['avg_time']));
-    }
-}
-
-// --- DROPDOWN: Fetch Unique Departments Dynamically ---
-$sqlDepts = "SELECT DISTINCT department FROM timekeeping_table WHERE department IS NOT NULL AND department != '' ORDER BY department ASC";
-$resultDepts = $conn->query($sqlDepts);
-
-// --- MAIN TABLE: Fetch Timekeeping Records (Sorted by recent date and time) ---
-$sql = "SELECT id, employee_name, department, time_in, time_out, status 
-        FROM timekeeping_table 
-        ORDER BY date_record DESC, time_in DESC"; 
-$result = $conn->query($sql);
+$stats = $dashboard->getTodayStats($today);
+$presentCount = $stats['present'];
+$lateCount = $stats['late'];
+$absentCount = $stats['absent'];
+$avgTimeValue = $stats['avg_check_in'];
+$departments = $attendanceService->getDepartments();
+$records = $attendanceService->getRecords('', '', $today);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -60,19 +27,18 @@ $result = $conn->query($sql);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Timekeeping - Kiwi Digital</title>
     
-   
-    <link class="stylesheet" href="bootstrap.min.css">
+    <link rel="stylesheet" href="bootstrap-5.3.5-dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     
     <script>try{if(localStorage.getItem('sidebarMinimized')==='true'){document.documentElement.classList.add('sidebar-minimized');}}catch(e){}</script>
 
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght=400;500;600;700&display=swap');
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { background-color: #f8f9fa; font-family: 'Inter', sans-serif; padding: 20px; height: 100vh; overflow: hidden; }
         
-        /* Layout Grid System - Matched exactly to index.php */
+        /* Layout Grid System */
         .app-container { 
             display: grid; 
             grid-template-columns: 310px 1fr; 
@@ -220,9 +186,7 @@ $result = $conn->query($sql);
             font-weight: 600;
         }
         
-        /* ==================================================================
-           MINIMIZED SIDEBAR CONFIGURATIONS
-           ================================================================== */
+        /* MINIMIZED SIDEBAR CONFIGURATIONS */
         .sidebar-minimized .sidebar {
             padding: 45px 0 35px 0;
         }
@@ -279,14 +243,10 @@ $result = $conn->query($sql);
             height: 125px;
         }
 
-        .card-header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+        .card-header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; border: none; background: transparent; padding: 0; }
         .card-title { font-size: 13px; font-weight: 600; color: #1f2937; white-space: nowrap; }
         .card-value { font-size: 28px; font-weight: 700; color: #111827; line-height: 1.1; }
-        .card-footer { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #6b7280; white-space: nowrap; }
-
-        .badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 6px; border-radius: 6px; font-size: 11px; font-weight: 600; }
-        .badge.positive { background-color: #ecfdf5; color: #10b981; }
-        .badge.negative { background-color: #fef2f2; color: #ef4444; }
+        .card-footer { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #6b7280; white-space: nowrap; border: none; background: transparent; padding: 0; }
 
         /* ==========================================================================
            ATTENDANCE PANEL & CONTROLS STYLES
@@ -306,11 +266,62 @@ $result = $conn->query($sql);
         .panel-title { font-size: 18px; font-weight: 700; color: #1e293b; }
         .panel-menu-dot { color: #94a3b8; cursor: pointer; }
 
-        .table-controls-strip { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; gap: 16px; }
-        .filter-group-left { display: flex; align-items: center; gap: 12px; }
+        /* ==========================================================================
+           UPDATED CONTROL STRIP (MATCHED TO Screenshot 2026-07-06 090720.png)
+           ========================================================================== */
+        .table-controls-strip { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            margin-bottom: 20px; 
+            gap: 16px; 
+            width: 100%;
+        }
+        
+        .filter-group-left {
+            flex-grow: 1;
+            max-width: 420px;
+        }
+
+        .table-search-box { 
+            position: relative; 
+            width: 100%; 
+        }
+        
+        .table-search-box i { 
+            position: absolute; 
+            left: 18px; 
+            top: 50%; 
+            transform: translateY(-50%); 
+            color: #94a3b8; 
+            font-size: 15px; 
+        }
+        
+        .table-search-box input { 
+            width: 100%; 
+            padding: 11px 16px 11px 48px; 
+            border-radius: 50px; 
+            border: 1px solid #e2e8f0; 
+            font-size: 14px; 
+            outline: none; 
+            color: #334155; 
+            transition: all 0.2s ease;
+        }
+        
+        .table-search-box input::placeholder {
+            color: #94a3b8;
+        }
+
+        .table-search-box input:focus {
+            border-color: #cbd5e1;
+            box-shadow: 0 0 0 3px rgba(226, 232, 240, 0.4);
+        }
+
+        .action-group-right { display: flex; align-items: center; gap: 12px; }
+        .filter-drawer { display: flex; align-items: center; gap: 12px; background-color: #f8fafc; padding: 12px 16px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 16px; }
 
         .select-filter-dropdown, .date-filter-picker {
-            padding: 10px 16px;
+            padding: 8px 14px;
             border-radius: 8px;
             border: 1px solid #e2e8f0;
             font-size: 14px;
@@ -320,23 +331,48 @@ $result = $conn->query($sql);
             cursor: pointer;
         }
 
-        .action-group-right { display: flex; align-items: center; gap: 12px; }
-        .table-search-box { position: relative; width: 260px; }
-        .table-search-box i { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 14px; }
-        .table-search-box input { width: 100%; padding: 10px 14px 10px 40px; border-radius: 8px; border: 1px solid #e2e8f0; font-size: 14px; outline: none; color: #334155; }
-
-        .btn-download-data {
-            background-color: #3b82f6;
-            color: #ffffff;
-            border: none;
+        /* UI Action Buttons (Clean & Sleek layout matching screen format) */
+        .btn-action-outline {
+            background-color: #ffffff;
+            color: #475569;
+            border: 1px solid #e2e8f0;
             padding: 10px 20px;
-            border-radius: 8px;
+            border-radius: 12px;
             font-size: 14px;
-            font-weight: 600;
-            display: flex;
+            font-weight: 500;
+            display: inline-flex;
             align-items: center;
             gap: 8px;
             cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .btn-action-outline:hover, .btn-action-outline:focus, .show > .btn-action-outline {
+            background-color: #f8fafc;
+            border-color: #cbd5e1;
+            color: #1e293b;
+        }
+
+        /* Custom Dropdown Styling */
+        .custom-dropdown-menu {
+            border-radius: 12px;
+            padding: 6px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            min-width: 140px;
+        }
+        .custom-dropdown-menu .dropdown-item {
+            border-radius: 8px;
+            padding: 8px 14px;
+            font-size: 14px;
+            color: #475569;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .custom-dropdown-menu .dropdown-item:hover {
+            background-color: #f1f5f9;
+            color: #1e293b;
         }
 
         /* ==========================================================================
@@ -370,14 +406,14 @@ $result = $conn->query($sql);
         <?php
         $imgPrefix = $imgPrefix ?? '';
         $navItems = [
-            ['id' => 'dashboard',   'href' => 'index.php',       'icon' => 'fa-table-cells-large',       'label' => 'Dashboard'],
-            ['id' => 'employee',    'href' => 'employee.php',    'icon' => 'fa-users-rectangle',         'label' => 'Employee'],
-            ['id' => 'biometric',   'href' => '#',               'icon' => 'fa-fingerprint',             'label' => 'Biometric Enrollment'],
-            ['id' => 'timekeeping', 'href' => 'timekeeping.php', 'icon' => 'fa-clipboard-user',          'label' => 'Timekeeping'],
-            ['id' => 'shift',       'href' => '#',               'icon' => 'fa-right-left',              'label' => 'Shift Configuration'],
-            ['id' => 'leave',       'href' => 'leave.php',       'icon' => 'fa-user-gear',               'label' => 'Leave Management'],
-            ['id' => 'internship',  'href' => '#',               'icon' => 'fa-cubes',                   'label' => 'Internship Registry'],
-            ['id' => 'audit',       'href' => '#',               'icon' => 'fa-square-poll-horizontal',  'label' => 'System Audit'],
+            ['id' => 'dashboard',   'href' => 'index.php',             'icon' => 'fa-table-cells-large',       'label' => 'Dashboard'],
+            ['id' => 'employee',    'href' => 'employee.php',          'icon' => 'fa-users-rectangle',         'label' => 'Employee'],
+            ['id' => 'biometric',   'href' => 'biometrics.php',        'icon' => 'fa-fingerprint',             'label' => 'Biometric Enrollment'],
+            ['id' => 'timekeeping', 'href' => 'timekeeping.php',       'icon' => 'fa-clipboard-user',          'label' => 'Timekeeping'],
+            ['id' => 'shift',       'href' => 'shift_management.php',  'icon' => 'fa-right-left',              'label' => 'Shift Configuration'],
+            ['id' => 'leave',       'href' => 'leave.php',             'icon' => 'fa-user-gear',               'label' => 'Leave Management'],
+            ['id' => 'internship',  'href' => 'internship.php',        'icon' => 'fa-cubes',                   'label' => 'Internship Registry'],
+            ['id' => 'audit',       'href' => 'audit.php',             'icon' => 'fa-square-poll-horizontal',  'label' => 'System Audit'],
         ];
         ?>
 
@@ -420,7 +456,7 @@ $result = $conn->query($sql);
                         <i class="fa-solid fa-circle-check" style="color: #3b82f6;"></i>
                         <span class="card-title">Total Employees Present</span>
                     </div>
-                    <div class="card-value"><?php echo $presentCount; ?></div>
+                    <div class="card-value" data-stat-present><?php echo $presentCount; ?></div>
                     <div class="card-footer">
                         <span>Recorded today</span>
                     </div>
@@ -431,7 +467,7 @@ $result = $conn->query($sql);
                         <i class="fa-solid fa-user-clock" style="color: #3b82f6;"></i>
                         <span class="card-title">Late Arrivals Today</span>
                     </div>
-                    <div class="card-value"><?php echo $lateCount; ?></div>
+                    <div class="card-value" data-stat-late><?php echo $lateCount; ?></div>
                     <div class="card-footer">
                         <span>Recorded today</span>
                     </div>
@@ -442,7 +478,7 @@ $result = $conn->query($sql);
                         <i class="fa-solid fa-user-minus" style="color: #ef4444;"></i>
                         <span class="card-title">Employees Absent</span>
                     </div>
-                    <div class="card-value"><?php echo $absentCount; ?></div>
+                    <div class="card-value" data-stat-absent><?php echo $absentCount; ?></div>
                     <div class="card-footer">
                         <span>Recorded today</span>
                     </div>
@@ -453,7 +489,7 @@ $result = $conn->query($sql);
                         <i class="fa-solid fa-clock" style="color: #3b82f6;"></i>
                         <span class="card-title">Average Check-In Time</span>
                     </div>
-                    <div class="card-value"><?php echo $avgTimeValue; ?></div>
+                    <div class="card-value" data-stat-avg-checkin><?php echo htmlspecialchars($avgTimeValue); ?></div>
                     <div class="card-footer">
                         <span>Based on active entries</span>
                     </div>
@@ -470,32 +506,51 @@ $result = $conn->query($sql);
                     <div class="panel-menu-dot"><i class="fa-solid fa-ellipsis"></i></div>
                 </div>
 
-                <!-- SPECIFIC TABLE CONTROLS -->
+                <!-- TABLE CONTROLS (MATCHED EXACTLY TO THE SCREENSHOT IMAGE) -->
                 <div class="table-controls-strip">
                     <div class="filter-group-left">
-                        <!-- DYNAMIC DEPARTMENT SELECT FILTER -->
-                        <select class="select-filter-dropdown">
-                            <option value="">Select department</option>
-                            <?php if ($resultDepts && $resultDepts->num_rows > 0): ?>
-                                <?php while($deptRow = $resultDepts->fetch_assoc()): ?>
-                                    <option value="<?php echo htmlspecialchars($deptRow['department']); ?>">
-                                        <?php echo htmlspecialchars($deptRow['department']); ?>
-                                    </option>
-                                <?php endwhile; ?>
-                            <?php endif; ?>
-                        </select>
-                        <input type="text" class="date-filter-picker" value="<?php echo date('d M Y'); ?>" readonly>
+                        <div class="table-search-box">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                            <input type="text" placeholder="Search by name, role, or employee ID" data-table-search>
+                        </div>
                     </div>
                     
                     <div class="action-group-right">
-                        <div class="table-search-box">
-                            <i class="fa-solid fa-magnifying-glass"></i>
-                            <input type="text" placeholder="Search employee">
-                        </div>
-                        <button class="btn-download-data">
-                            <i class="fa-solid fa-download"></i> Download data <i class="fa-solid fa-chevron-down" style="font-size: 11px; margin-left: 4px;"></i>
+                        <!-- FILTER TOGGLE BUTTON -->
+                        <button type="button" class="btn-action-outline" id="btnFilterToggle">
+                            <i class="fa-solid fa-sliders"></i> Filter
                         </button>
+
+                        <!-- EXPORT DROPDOWN SELECTION BUTTON -->
+                        <div class="dropdown">
+                            <button type="button" class="btn-action-outline dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" id="btnExportDropdown">
+                                <i class="fa-solid fa-download"></i> Export
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end custom-dropdown-menu">
+                                <li>
+                                    <button class="dropdown-item btn-export" data-export-type="attendance" data-export-format="csv">
+                                        <i class="fa-solid fa-file-csv text-success"></i> CSV Format
+                                    </button>
+                                </li>
+                                <li>
+                                    <button class="dropdown-item btn-export" data-export-type="attendance" data-export-format="pdf">
+                                        <i class="fa-solid fa-file-pdf text-danger"></i> PDF Document
+                                    </button>
+                                </li>
+                            </ul>
+                        </div>
                     </div>
+                </div>
+
+                <!-- COLLAPSIBLE FILTER PANEL DRAWER -->
+                <div class="filter-drawer" id="filterOptionsDrawer" style="display: none;">
+                    <select class="select-filter-dropdown" data-filter-department>
+                        <option value="">All Departments</option>
+                        <?php foreach ($departments as $dept): ?>
+                            <option value="<?php echo htmlspecialchars($dept); ?>"><?php echo htmlspecialchars($dept); ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                    <input type="date" class="date-filter-picker" data-filter-date value="<?php echo $today; ?>">
                 </div>
 
                 <!-- ATTENDANCE DATA TABLE -->
@@ -512,11 +567,12 @@ $result = $conn->query($sql);
                                 <th></th>
                             </tr>
                         </thead>
-                        <tbody>
-                            <?php if ($result && $result->num_rows > 0): ?>
-                                <?php while($row = $result->fetch_assoc()): ?>
+                        <tbody id="attendance-table-body">
+                            <?php if (!empty($records)): ?>
+                                <?php foreach ($records as $row): ?>
+                                    <?php $statusClass = strtolower($row['status']); if (!in_array($statusClass, ['present', 'late', 'absent'], true)) { $statusClass = 'present'; } ?>
                                     <tr>
-                                        <td class="id-cell">#E<?php echo htmlspecialchars($row['id']); ?></td>
+                                        <td class="id-cell">#E<?php echo (int) $row['id']; ?></td>
                                         <td>
                                             <div class="profile-meta-cell">
                                                 <div class="avatar-image"></div>
@@ -524,40 +580,14 @@ $result = $conn->query($sql);
                                             </div>
                                         </td>
                                         <td class="dept-cell"><?php echo htmlspecialchars($row['department']); ?></td>
-                                        <td class="time-cell">
-                                            <?php 
-                                                echo ($row['time_in'] && $row['time_in'] != '00:00:00') 
-                                                    ? date("h:i A", strtotime($row['time_in'])) 
-                                                    : '<span class="empty-log">--:--</span>'; 
-                                            ?>
-                                        </td>
-                                        <td class="time-cell">
-                                            <?php 
-                                                echo ($row['time_out'] && $row['time_out'] != '00:00:00') 
-                                                    ? date("h:i A", strtotime($row['time_out'])) 
-                                                    : '<span class="empty-log">--:--</span>'; 
-                                            ?>
-                                        </td>
-                                        <td>
-                                            <?php 
-                                                $statusClass = strtolower($row['status']); 
-                                                if (!in_array($statusClass, ['present', 'late', 'absent'])) {
-                                                    $statusClass = 'present'; 
-                                                }
-                                            ?>
-                                            <span class="status-pill <?php echo $statusClass; ?>">
-                                                <?php echo htmlspecialchars($row['status']); ?>
-                                            </span>
-                                        </td>
+                                        <td class="time-cell"><?php echo (!empty($row['time_in']) && $row['time_in'] !== '00:00:00') ? date('h:i A', strtotime($row['time_in'])) : '<span class="empty-log">--:--</span>'; ?></td>
+                                        <td class="time-cell"><?php echo (!empty($row['time_out']) && $row['time_out'] !== '00:00:00') ? date('h:i A', strtotime($row['time_out'])) : '<span class="empty-log">--:--</span>'; ?></td>
+                                        <td><span class="status-pill <?php echo $statusClass; ?>"><?php echo htmlspecialchars($row['status']); ?></span></td>
                                         <td class="action-dot-menu"><i class="fa-solid fa-ellipsis"></i></td>
                                     </tr>
-                                <?php endwhile; ?>
+                                <?php endforeach; ?>
                             <?php else: ?>
-                                <tr>
-                                    <td colspan="7" style="text-align: center; color: #94a3b8; padding: 30px;">
-                                        No timekeeping records found.
-                                    </td>
-                                </tr>
+                                <tr><td colspan="7" style="text-align: center; color: #94a3b8; padding: 30px;">No timekeeping records found.</td></tr>
                             <?php endif; ?>
                         </tbody>
                     </table>
@@ -566,12 +596,108 @@ $result = $conn->query($sql);
         </main>
     </div>
 
+    <script src="bootstrap-5.3.5-dist/js/bootstrap.bundle.min.js"></script>
+    <script src="assets/js/app.js"></script>
     <script>
-        document.addEventListener("DOMContentLoaded", function() {
-            const toggleSidebarBtn = document.getElementById('toggleSidebarBtn');
-            toggleSidebarBtn.addEventListener('click', function() {
-                const isMinimized = document.documentElement.classList.toggle('sidebar-minimized');
-                localStorage.setItem('sidebarMinimized', isMinimized);
+        document.addEventListener('DOMContentLoaded', function() {
+            // Sidebar collapse handler
+            const toggleBtn = document.getElementById('toggleSidebarBtn');
+            if (toggleBtn) {
+                toggleBtn.addEventListener('click', function() {
+                    const isMinimized = document.documentElement.classList.toggle('sidebar-minimized');
+                    localStorage.setItem('sidebarMinimized', isMinimized);
+                });
+            }
+
+            // Filter drawer show/hide toggle
+            const filterToggle = document.getElementById('btnFilterToggle');
+            const filterDrawer = document.getElementById('filterOptionsDrawer');
+            if (filterToggle && filterDrawer) {
+                filterToggle.addEventListener('click', function() {
+                    if (filterDrawer.style.display === 'none') {
+                        filterDrawer.style.display = 'flex';
+                        filterToggle.classList.add('active');
+                    } else {
+                        filterDrawer.style.display = 'none';
+                        filterToggle.classList.remove('active');
+                    }
+                });
+            }
+
+            // AJAX Table Filter Handlers
+            const departmentFilter = document.querySelector('[data-filter-department]');
+            const dateFilter = document.querySelector('[data-filter-date]');
+            const searchInput = document.querySelector('[data-table-search]');
+
+            async function loadAttendance() {
+                const payload = {
+                    search: searchInput?.value.trim() || '',
+                    department: departmentFilter?.value || '',
+                    date: dateFilter?.value || '',
+                };
+
+                try {
+                    if (typeof KiwiApp !== 'undefined' && KiwiApp.request) {
+                        const response = await KiwiApp.request('attendance_list', payload, 'GET');
+                        if (response.status !== 'success') return;
+
+                        if (response.stats) KiwiApp.updateMetricCards(response.stats);
+
+                        const tbody = document.getElementById('attendance-table-body');
+                        if (!tbody) return;
+
+                        if (!response.data || !response.data.length) {
+                            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#94a3b8; padding:30px;">No timekeeping records found.</td></tr>';
+                            return;
+                        }
+
+                        tbody.innerHTML = response.data.map((row) => {
+                            let statusClass = (row.status || 'present').toLowerCase();
+                            if (!['present', 'late', 'absent'].includes(statusClass)) statusClass = 'present';
+                            const timeIn = row.time_in && row.time_in !== '00:00:00' ? KiwiApp.formatTime(row.time_in) : '<span class="empty-log">--:--</span>';
+                            const timeOut = row.time_out && row.time_out !== '00:00:00' ? KiwiApp.formatTime(row.time_out) : '<span class="empty-log">--:--</span>';
+                            return `
+                                <tr>
+                                    <td class="id-cell">#E${row.id}</td>
+                                    <td><div class="profile-meta-cell"><div class="avatar-image"></div><span>${KiwiApp.escapeHtml(row.employee_name)}</span></div></td>
+                                    <td class="dept-cell">${KiwiApp.escapeHtml(row.department)}</td>
+                                    <td class="time-cell">${timeIn}</td>
+                                    <td class="time-cell">${timeOut}</td>
+                                    <td><span class="status-pill ${statusClass}">${KiwiApp.escapeHtml(row.status)}</span></td>
+                                    <td class="action-dot-menu"><i class="fa-solid fa-ellipsis"></i></td>
+                                </tr>
+                            `;
+                        }).join('');
+                    }
+                } catch (error) {
+                    console.error("Error loading attendance data:", error);
+                }
+            }
+
+            if (typeof KiwiApp !== 'undefined' && KiwiApp.bindTableSearch) {
+                KiwiApp.bindTableSearch(loadAttendance);
+            } else if (searchInput) {
+                let delayTimer;
+                searchInput.addEventListener('input', function() {
+                    clearTimeout(delayTimer);
+                    delayTimer = setTimeout(loadAttendance, 300);
+                });
+            }
+
+            departmentFilter?.addEventListener('change', loadAttendance);
+            dateFilter?.addEventListener('change', loadAttendance);
+
+            // Export dropdown action hooks
+            document.querySelectorAll('.dropdown-item.btn-export').forEach(button => {
+                button.addEventListener('click', function() {
+                    const format = this.getAttribute('data-export-format');
+                    const type = this.getAttribute('data-export-type');
+                    if (typeof KiwiApp !== 'undefined' && KiwiApp.handleExport) {
+                        KiwiApp.handleExport(type, format);
+                    } else {
+                        console.log(`Exporting ${type} as ${format.toUpperCase()}`);
+                    }
+                });
             });
         });
     </script>

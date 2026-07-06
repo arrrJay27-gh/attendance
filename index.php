@@ -1,53 +1,27 @@
-<?php 
+<?php
 
 require_once 'auth.php';
-$activePage = 'dashboard'; 
+$activePage = 'dashboard';
 
-// Use shared Database class for connection
 require_once 'database.php';
+require_once 'class/Dashboard.php';
+
 $database = new Database();
 $conn = $database->getConnection();
+$dashboard = new Dashboard($conn);
 
-// 1. Live Count: Total Employees Present Today
-$present_q = "SELECT COUNT(DISTINCT name) as total FROM attendance WHERE status='Present' AND DATE(date) = CURDATE()";
-$present_res = $conn->query($present_q);
-$total_present = ($present_res && $row = $present_res->fetch_assoc()) ? $row['total'] : 0;
+$stats = $dashboard->getTodayStats();
+$total_present = $stats['present'];
+$total_late = $stats['late'];
+$total_absent = $stats['absent'];
+$avg_check_in = $stats['avg_check_in'];
+$activity = $dashboard->getRecentActivity(4);
 
-// 2. Live Count: Late Arrivals Today
-$late_q = "SELECT COUNT(DISTINCT name) as total FROM attendance WHERE status='Late' AND DATE(date) = CURDATE()";
-$late_res = $conn->query($late_q);
-$total_late = ($late_res && $row = $late_res->fetch_assoc()) ? $row['total'] : 0;
-
-// 3. Live Count: Employees Absent Today
-$absent_q = "SELECT COUNT(DISTINCT name) as total FROM attendance WHERE status='Absent' AND DATE(date) = CURDATE()";
-$absent_res = $conn->query($absent_q);
-$total_absent = ($absent_res && $row = $absent_res->fetch_assoc()) ? $row['total'] : 0;
-
-
-// ==========================================================================
-// REAL-TIME DYNAMIC GRAPH ANALYTICS CALCULATIONS
-// ==========================================================================
-$graph_months = [];
-$graph_counts = [];
-
-for ($i = 5; $i >= 0; $i--) {
-    $target_month_label = date('M', strtotime("-$i months"));
-    $target_month_num = date('m', strtotime("-$i months"));
-    $target_year = date('Y', strtotime("-$i months"));
-    
-    $analytics_q = "SELECT COUNT(*) as total FROM attendance WHERE MONTH(date) = '$target_month_num' AND YEAR(date) = '$target_year'";
-    $analytics_res = $conn->query($analytics_q);
-    $month_count = ($analytics_res && $row = $analytics_res->fetch_assoc()) ? $row['total'] : 0;
-    
-    $graph_months[] = $target_month_label;
-    $graph_counts[] = $month_count;
-}
-
-$max_recorded_value = max($graph_counts) > 0 ? max($graph_counts) : 10;
-$y_positions = [];
-foreach ($graph_counts as $count) {
-    $y_positions[] = 180 - (($count / $max_recorded_value) * 120); 
-}
+$analytics = $dashboard->getMonthlyAnalytics(6);
+$graph_months = $analytics['labels'];
+$graph_counts = $analytics['counts'];
+$max_recorded_value = $analytics['max'];
+$y_positions = $analytics['y_positions'];
 
 $svg_points_path = "M 25,{$y_positions[0]} ";
 $svg_points_path .= "C 70,".($y_positions[0]-20)." 70,".($y_positions[1]+5)." 115,{$y_positions[1]} ";
@@ -64,7 +38,7 @@ $svg_area_fill_path = $svg_points_path . " L 475,180 L 25,180 Z";
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kiwi Digital Dashboard</title>
-    <link rel="stylesheet" href="bootstrap.min.css">
+    <link class="styles" rel="stylesheet" href="bootstrap-5.3.5-dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     <script>try{if(localStorage.getItem('sidebarMinimized')==='true'){document.documentElement.classList.add('sidebar-minimized');}}catch(e){}</script>
     <style>
@@ -108,16 +82,41 @@ $svg_area_fill_path = $svg_points_path . " L 475,180 L 25,180 Z";
         .dashboard-row-layout { display: flex; flex-direction: column; gap: 16px; width: 100%; height: calc(100% - 56px); }
         .metrics-straight-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; width: 100%; }
         
-        .card { background-color: #ffffff; border-radius: 16px; padding: 16px 20px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02), 0 1px 2px rgba(0, 0, 0, 0.04); border: 1px solid #f1f3f5; display: flex; flex-direction: column; justify-content: space-between; height: 125px; }
-        .card-header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+        /* CLEANED UP TOP METRIC CARDS STYLE BLOCK */
+        .card { 
+            background-color: #ffffff; 
+            border-radius: 16px; 
+            padding: 16px 20px; 
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02), 0 1px 2px rgba(0, 0, 0, 0.04); 
+            border: 1px solid #f1f3f5; 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: space-between; 
+            height: 125px; 
+        }
+        .card-header { 
+            display: flex; 
+            align-items: center; 
+            gap: 8px; 
+            margin-bottom: 4px; 
+            border: none; 
+            background: transparent; 
+            padding: 0; 
+        }
         .card-header i { font-size: 14px; color: #3b82f6; }
         .card-title { font-size: 13px; font-weight: 600; color: #1f2937; white-space: nowrap; }
         .card-value { font-size: 28px; font-weight: 700; color: #111827; line-height: 1.1; }
-        .card-footer { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #6b7280; white-space: nowrap; }
-        
-        .badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 6px; border-radius: 6px; font-size: 11px; font-weight: 600; }
-        .badge.positive { background-color: #ecfdf5; color: #10b981; }
-        .badge.negative { background-color: #fef2f2; color: #ef4444; }
+        .card-footer { 
+            display: flex; 
+            align-items: center; 
+            gap: 6px; 
+            font-size: 12px; 
+            color: #6b7280; 
+            white-space: nowrap; 
+            border: none; 
+            background: transparent; 
+            padding: 0; 
+        }
 
         .bottom-content-area { display: flex; gap: 24px; width: 100%; height: calc(100% - 141px); align-items: stretch; }
         
@@ -159,8 +158,8 @@ $svg_area_fill_path = $svg_points_path . " L 475,180 L 25,180 Z";
            ================================================================== */
         .sidebar {
             width: 100%;
-            background-color: #dcdddf; /* Grey tone capsule container background */
-            border-radius: 36px;       /* Pill shape corner flow configuration */
+            background-color: #dcdddf; 
+            border-radius: 36px;       
             padding: 45px 0 35px 0;
             display: flex;
             flex-direction: column;
@@ -186,14 +185,12 @@ $svg_area_fill_path = $svg_points_path . " L 475,180 L 25,180 Z";
             width: 100%;
         }
         
-        /* Smooth scale layout setup for the core corporate logo image */
         .logo-img {
             max-width: 140px;
             height: auto;
             transition: max-width 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s ease;
         }
         
-        /* Floating Round Sidebar Switcher Button Layout Profile */
         .sidebar-toggle-btn {
             position: absolute;
             top: 10px;
@@ -243,7 +240,6 @@ $svg_area_fill_path = $svg_points_path . " L 475,180 L 25,180 Z";
             transition: color 0.2s;
         }
         
-        /* White Active Element Tab Inset Configuration */
         .nav-item.active a {
             background-color: #ffffff;
             color: #11161e;
@@ -280,16 +276,13 @@ $svg_area_fill_path = $svg_points_path . " L 475,180 L 25,180 Z";
             font-weight: 600;
         }
         
-        /* ==================================================================
-           MINIMIZED STATE TRANSITIONS & AUTOMATIC LOGO RESIZING
-           ================================================================== */
+        /* MINIMIZED STATE TRANSITIONS */
         .sidebar-minimized .sidebar {
             padding: 45px 0 35px 0;
         }
         
-        /* Resize the logo container and image smoothly when minimized */
         .sidebar-minimized .sidebar .logo-img {
-            max-width: 40px; /* Adjusts width down to a small icon size */
+            max-width: 40px; 
             transform: scale(1);
         }
         
@@ -375,16 +368,16 @@ $svg_area_fill_path = $svg_points_path . " L 475,180 L 25,180 Z";
             </div>
 
             <div class="dashboard-row-layout">
+                <!-- CLEAN UPDATED CARDS GRID -->
                 <div class="metrics-straight-row">
                     <div class="card">
                         <div class="card-header">
                             <i class="fa-solid fa-circle-check"></i>
                             <span class="card-title">Total Employees Present</span>
                         </div>
-                        <div class="card-value"><?php echo $total_present; ?></div>
+                        <div class="card-value" data-stat-present><?php echo $total_present; ?></div>
                         <div class="card-footer">
-                            <span class="badge positive"><i class="fa-solid fa-arrow-up"></i> Live</span>
-                            <span>from database</span>
+                            <span>Recorded today</span>
                         </div>
                     </div>
 
@@ -393,10 +386,9 @@ $svg_area_fill_path = $svg_points_path . " L 475,180 L 25,180 Z";
                             <i class="fa-solid fa-user-clock"></i>
                             <span class="card-title">Late Arrivals Today</span>
                         </div>
-                        <div class="card-value"><?php echo $total_late; ?></div>
+                        <div class="card-value" data-stat-late><?php echo $total_late; ?></div>
                         <div class="card-footer">
-                            <span class="badge positive"><i class="fa-solid fa-arrow-up"></i> Live</span>
-                            <span>updates tracked</span>
+                            <span>Recorded today</span>
                         </div>
                     </div>
 
@@ -405,10 +397,9 @@ $svg_area_fill_path = $svg_points_path . " L 475,180 L 25,180 Z";
                             <i class="fa-solid fa-user-minus" style="color: #ef4444;"></i>
                             <span class="card-title">Employees Absent</span>
                         </div>
-                        <div class="card-value"><?php echo $total_absent; ?></div>
+                        <div class="card-value" data-stat-absent><?php echo $total_absent; ?></div>
                         <div class="card-footer">
-                            <span class="badge negative"><i class="fa-solid fa-arrow-down"></i> Live</span>
-                            <span>missing checks</span>
+                            <span>Recorded today</span>
                         </div>
                     </div>
 
@@ -417,9 +408,9 @@ $svg_area_fill_path = $svg_points_path . " L 475,180 L 25,180 Z";
                             <i class="fa-solid fa-clock"></i>
                             <span class="card-title">Average Check-In Time</span>
                         </div>
-                        <div class="card-value" id="live-time-card">--:-- --</div>
+                        <div class="card-value" data-stat-avg-checkin><?php echo htmlspecialchars($avg_check_in); ?></div>
                         <div class="card-footer">
-                            <span>System active</span>
+                            <span>Based on active entries</span>
                         </div>
                     </div>
                 </div>
@@ -496,29 +487,23 @@ $svg_area_fill_path = $svg_points_path . " L 475,180 L 25,180 Z";
                                 <span class="activity-log-title">Activity log</span>
                                 <a href="#" class="view-all-link">view all</a>
                             </div>
-                            <div class="activity-list">
-                                <?php
-                                $log_q = "SELECT name, status, time FROM attendance ORDER BY id DESC LIMIT 4";
-                                $log_res = $conn->query($log_q);
-
-                                if ($log_res && $log_res->num_rows > 0) {
-                                    while($log = $log_res->fetch_assoc()) {
-                                        echo '
+                            <div class="activity-list" id="activity-log-list">
+                                <?php if (!empty($activity)): ?>
+                                    <?php foreach ($activity as $log): ?>
                                         <div class="activity-item">
                                             <div class="activity-user-info">
-                                                <img src="https://ui-avatars.com/api/?name='.urlencode($log['name']).'&background=cbd5e1&color=334155" class="activity-avatar" alt="">
+                                                <img src="https://ui-avatars.com/api/?name=<?php echo urlencode($log['name']); ?>&background=cbd5e1&color=334155" class="activity-avatar" alt="">
                                                 <div class="activity-details">
-                                                    <span class="activity-username">'.htmlspecialchars($log['name']).'</span>
-                                                    <span class="activity-action">'.htmlspecialchars($log['status']).'</span>
+                                                    <span class="activity-username"><?php echo htmlspecialchars($log['name']); ?></span>
+                                                    <span class="activity-action"><?php echo htmlspecialchars($log['status']); ?></span>
                                                 </div>
                                             </div>
-                                            <span class="activity-time">'.date("h:i A", strtotime($log['time'])).'</span>
-                                        </div>';
-                                    }
-                                } else {
-                                    echo '<span class="activity-action" style="text-align:center; padding:20px; display:block;">No log tracks found</span>';
-                                }
-                                ?>
+                                            <span class="activity-time"><?php echo !empty($log['time_in']) ? date('h:i A', strtotime($log['time_in'])) : '--:--'; ?></span>
+                                        </div>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <span class="activity-action" style="text-align:center; padding:20px; display:block;">No log tracks found</span>
+                                <?php endif; ?>
                             </div>
                         </div>
                     </div>
@@ -527,27 +512,50 @@ $svg_area_fill_path = $svg_points_path . " L 475,180 L 25,180 Z";
         </main>
     </div>
 
+    <script src="assets/js/app.js"></script>
     <script>
         document.addEventListener("DOMContentLoaded", function() {
-            // Sidebar minimization logic
+            // Sidebar collapse handler toggle script logic
             const toggleSidebarBtn = document.getElementById('toggleSidebarBtn');
-            
-            toggleSidebarBtn.addEventListener('click', function() {
-                const isMinimized = document.documentElement.classList.toggle('sidebar-minimized');
-                localStorage.setItem('sidebarMinimized', isMinimized);
-            });
-
-            // Running metrics logic loop
-            function updateLiveTimeCard() {
-                const now = new Date();
-                let hours = now.getHours(); let minutes = now.getMinutes();
-                const ampm = hours >= 12 ? 'PM' : 'AM';
-                hours = hours % 12; hours = hours ? hours : 12; 
-                minutes = minutes < 10 ? '0' + minutes : minutes;
-                hours = hours < 10 ? '0' + hours : hours;
-                document.getElementById('live-time-card').innerText = `${hours}:${minutes} ${ampm}`;
+            if (toggleSidebarBtn) {
+                toggleSidebarBtn.addEventListener('click', function() {
+                    const isMinimized = document.documentElement.classList.toggle('sidebar-minimized');
+                    localStorage.setItem('sidebarMinimized', isMinimized);
+                });
             }
-            updateLiveTimeCard(); setInterval(updateLiveTimeCard, 1000);
+
+            async function refreshDashboardStats() {
+                try {
+                    const response = await KiwiApp.request('dashboard_stats', {}, 'GET');
+                    if (response.status !== 'success') return;
+                    KiwiApp.updateMetricCards(response.data);
+
+                    const list = document.getElementById('activity-log-list');
+                    if (list && Array.isArray(response.activity)) {
+                        if (!response.activity.length) {
+                            list.innerHTML = '<span class="activity-action" style="text-align:center; padding:20px; display:block;">No log tracks found</span>';
+                            return;
+                        }
+                        list.innerHTML = response.activity.map((log) => `
+                            <div class="activity-item">
+                                <div class="activity-user-info">
+                                    <img src="https://ui-avatars.com/api/?name=${encodeURIComponent(log.name)}&background=cbd5e1&color=334155" class="activity-avatar" alt="">
+                                    <div class="activity-details">
+                                        <span class="activity-username">${KiwiApp.escapeHtml(log.name)}</span>
+                                        <span class="activity-action">${KiwiApp.escapeHtml(log.status)}</span>
+                                    </div>
+                                </div>
+                                <span class="activity-time">${log.time_in ? KiwiApp.formatTime(log.time_in) : '--:--'}</span>
+                            </div>
+                        `).join('');
+                    }
+                } catch (error) {
+                    console.error(error);
+                }
+            }
+
+            refreshDashboardStats();
+            setInterval(refreshDashboardStats, 30000);
 
             // Calendar ribbon view builder logic
             const realToday = new Date(); let currentSelectedDate = new Date(realToday); let dayOffsetValue = 0; 
