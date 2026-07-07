@@ -16,7 +16,7 @@ class Attendance
             return false;
         }
 
-        $sql = "SELECT id, name, department FROM employees WHERE biometric_rfid = ? LIMIT 1";
+        $sql = "SELECT id, name, department FROM users WHERE biometric_rfid = ? LIMIT 1";
         $stmt = $this->db->prepare($sql);
         $stmt->bind_param('s', $rfidValue);
         $stmt->execute();
@@ -53,7 +53,7 @@ class Attendance
                 $stmtI->close();
                 return [
                     'status' => 'success',
-                    'action' => 'Clock In',
+                    'action' => 'Time In',
                     'status_type' => $isLate,
                     'employee_name' => $employeeName,
                 ];

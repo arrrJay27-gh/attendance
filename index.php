@@ -17,20 +17,12 @@ $total_absent = $stats['absent'];
 $avg_check_in = $stats['avg_check_in'];
 $activity = $dashboard->getRecentActivity(4);
 
+// Pull attendance values to power the monthly chart bar heights dynamically
 $analytics = $dashboard->getMonthlyAnalytics(6);
-$graph_months = $analytics['labels'];
-$graph_counts = $analytics['counts'];
-$max_recorded_value = $analytics['max'];
-$y_positions = $analytics['y_positions'];
+$graph_months = $analytics['labels']; // e.g., ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun']
+$graph_counts = $analytics['counts']; // Actual attendance counts from DB
+$max_recorded_value = $analytics['max'] > 0 ? $analytics['max'] : 1; 
 
-$svg_points_path = "M 25,{$y_positions[0]} ";
-$svg_points_path .= "C 70,".($y_positions[0]-20)." 70,".($y_positions[1]+5)." 115,{$y_positions[1]} ";
-$svg_points_path .= "C 160,".($y_positions[1]-5)." 160,".($y_positions[2]+5)." 205,{$y_positions[2]} ";
-$svg_points_path .= "C 250,".($y_positions[2]-5)." 250,".($y_positions[3]+5)." 295,{$y_positions[3]} ";
-$svg_points_path .= "C 340,".($y_positions[3]-5)." 340,".($y_positions[4]+5)." 385,{$y_positions[4]} ";
-$svg_points_path .= "C 430,".($y_positions[4]-5)." 430,".($y_positions[5]+5)." 475,{$y_positions[5]}";
-
-$svg_area_fill_path = $svg_points_path . " L 475,180 L 25,180 Z";
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -58,7 +50,6 @@ $svg_area_fill_path = $svg_points_path . " L 475,180 L 25,180 Z";
             transition: grid-template-columns 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         
-        /* Handle minimized state grid column switch */
         .sidebar-minimized .app-container {
             grid-template-columns: 85px 1fr;
         }
@@ -82,7 +73,6 @@ $svg_area_fill_path = $svg_points_path . " L 475,180 L 25,180 Z";
         .dashboard-row-layout { display: flex; flex-direction: column; gap: 16px; width: 100%; height: calc(100% - 56px); }
         .metrics-straight-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; width: 100%; }
         
-        /* CLEANED UP TOP METRIC CARDS STYLE BLOCK */
         .card { 
             background-color: #ffffff; 
             border-radius: 16px; 
@@ -120,12 +110,69 @@ $svg_area_fill_path = $svg_points_path . " L 475,180 L 25,180 Z";
 
         .bottom-content-area { display: flex; gap: 24px; width: 100%; height: calc(100% - 141px); align-items: stretch; }
         
-        .analytics-card { background-color: #ffffff; border-radius: 16px; padding: 25px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02), 0 1px 2px rgba(0, 0, 0, 0.04); border: 1px solid #f1f3f5; flex-grow: 1; display: flex; flex-direction: column; gap: -12px; height: 95%; overflow: hidden; }
-        .analytics-header { display: flex; justify-content: space-between; align-items: center; }
-        .analytics-title { font-size: 16px; font-weight: 600; color: #1f2937; }
-        .analytics-dropdown { background-color: #f8f9fa; border: 1px solid #e5e7eb; padding: 4px 10px; border-radius: 8px; font-size: 12px; color: #4b5563; cursor: pointer; outline: none; }
-        .chart-container { width: 100%; flex-grow: 1; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        /* ==================================================================
+           ANALYTICS CARD & PROGRESS COMPONENT STYLES
+           ================================================================== */
+        .analytics-container-column { display: flex; flex-direction: column; gap: 16px; flex-grow: 1; height: 95%; }
+        
+        .kpi-card { background-color: #ffffff; border-radius: 16px; padding: 20px 24px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02), 0 1px 2px rgba(0, 0, 0, 0.04); border: 1px solid #f1f3f5; flex-grow: 1; display: flex; flex-direction: column; justify-content: space-between; }
+        .kpi-header { display: flex; justify-content: space-between; align-items: center; }
+        .kpi-title-block { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 600; color: #1e293b; }
+        .kpi-title-block i { color: #64748b; font-size: 14px; }
+        
+        /* UPDATED: Structured padding and design style for the select filter element */
+        .analytics-dropdown { 
+            background-color: #ffffff; 
+            border: 1px solid #e2e8f0; 
+            border-radius: 8px; 
+            padding: 6px 36px 6px 12px; 
+            font-size: 13px; 
+            font-weight: 500; 
+            color: #334155; 
+            outline: none; 
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+            appearance: none; 
+            -webkit-appearance: none; 
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e"); 
+            background-repeat: no-repeat; 
+            background-position: right 12px center; 
+            background-size: 14px; 
+        }
+        .analytics-dropdown:hover { border-color: #cbd5e1; background-color: #f8fafc; }
+        .analytics-dropdown:focus { border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1); }
 
+        .kpi-value-block { margin-top: 12px; }
+        .kpi-percentage { font-size: 26px; font-weight: 700; color: #0f172a; }
+        .kpi-trend { font-size: 13px; font-weight: 600; color: #22c55e; margin-top: 2px; }
+        .kpi-trend span { color: #64748b; font-weight: 400; }
+
+        .kpi-bar-chart { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; align-items: flex-end; height: 110px; margin-top: 15px; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; }
+        .bar-wrapper { display: flex; flex-direction: column; align-items: center; height: 100%; justify-content: flex-end; position: relative; }
+        .bar-column-fill { width: 100%; background: linear-gradient(to top, rgba(99, 102, 241, 0.05), rgba(99, 102, 241, 0.4)); border-top: 2px solid #4f46e5; border-radius: 2px 2px 0 0; min-height: 5px; transition: height 0.5s ease; }
+        .bar-label { font-size: 11px; color: #94a3b8; margin-top: 6px; font-weight: 500; }
+
+        .recent-activity-timeline-card { background-color: #ffffff; border-radius: 16px; padding: 20px 24px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02), 0 1px 2px rgba(0, 0, 0, 0.04); border: 1px solid #f1f3f5; height: 140px; display: flex; flex-direction: column; justify-content: space-between; }
+        .timeline-header { display: flex; justify-content: space-between; align-items: center; }
+        .timeline-title { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; color: #1e293b; }
+        .timeline-title i { color: #64748b; }
+        .timeline-menu-btn { background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 14px; }
+        
+        .total-worked-label { font-size: 15px; font-weight: 600; color: #334155; margin-top: 6px; }
+        .total-worked-duration { font-size: 16px; font-weight: 400; color: #64748b; margin-bottom: 10px; }
+        .total-worked-duration strong { color: #0f172a; font-weight: 700; font-size: 18px; }
+
+        .stacked-progress-bar { display: flex; width: 100%; height: 14px; border-radius: 4px; overflow: hidden; background-color: #f1f5f9; }
+        .progress-slice { height: 100%; transition: width 0.3s ease; }
+        .slice-pause { background-color: #f59e0b; }
+        .slice-active { background-color: #38bdf8; }
+        .slice-extra { background-color: #8b5cf6; }
+
+        .progress-legends { display: flex; gap: 16px; margin-top: 10px; }
+        .legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 600; color: #1e293b; }
+        .legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+        /* Sidebar Elements */
         .right-sidebar-column { display: flex; flex-direction: column; gap: 16px; width: 340px; min-width: 340px; height: 100%; }
         .calendar-card { background-color: #f1f5f7; border-radius: 20px; padding: 16px 20px; width: 100%; box-shadow: inset 0 0 1px rgba(0,0,0,0.05); flex-shrink: 0; }
         .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
@@ -147,169 +194,34 @@ $svg_area_fill_path = $svg_points_path . " L 475,180 L 25,180 Z";
         .activity-list { display: flex; flex-direction: column; gap: 12px; overflow-y: auto; flex-grow: 1; padding-right: 4px; }
         .activity-item { display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
         .activity-user-info { display: flex; align-items: center; gap: 10px; }
-        .activity-avatar { width: 32px; height: 32px; border-radius: 50%; background-color: #e2e8f0; object-fit: cover; }
+        .activity-avatar { width: 32px; height: 32px; border-radius: 50%; background-color: #cbd5e1; object-fit: cover; }
         .activity-details { display: flex; flex-direction: column; }
         .activity-username { font-size: 12px; font-weight: 600; color: #1f2937; line-height: 1.2; }
         .activity-action { font-size: 11px; color: #6b7280; }
         .activity-time { font-size: 11px; color: #94a3b8; white-space: nowrap; }
 
-        /* ==================================================================
-           SIDEBAR STYLES (MATCHING SCREENSHOT WITH DYNAMIC LOGO RESIZING)
-           ================================================================== */
-        .sidebar {
-            width: 100%;
-            background-color: #dcdddf; 
-            border-radius: 36px;       
-            padding: 45px 0 35px 0;
-            display: flex;
-            flex-direction: column;
-            position: relative;
-            height: 100%;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
+        .sidebar { width: 100%; background-color: #dcdddf; border-radius: 36px; padding: 45px 0 35px 0; display: flex; flex-direction: column; position: relative; height: 100%; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .sidebar-header { display: flex; justify-content: center; align-items: center; margin-bottom: 35px; width: 100%; position: relative; padding: 0 20px; }
+        .logo-container { display: flex; align-items: center; justify-content: center; width: 100%; }
+        .logo-img { max-width: 140px; height: auto; transition: max-width 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s ease; }
+        .sidebar-toggle-btn { position: absolute; top: 10px; right: -13px; width: 26px; height: 26px; border-radius: 50%; background-color: #ffffff; border: none; box-shadow: 0 2px 6px rgba(0,0,0,0.12); display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 100; color: #52525b; }
+        .sidebar-toggle-btn i { font-size: 11px; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .nav-links { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; flex-grow: 1; }
+        .nav-item { width: 100%; }
+        .nav-item a { display: flex; align-items: center; gap: 20px; padding: 15px 35px; color: #434850; text-decoration: none; font-size: 16px; font-weight: 600; transition: color 0.2s; }
+        .nav-item.active a { background-color: #ffffff; color: #11161e; border-top-right-radius: 18px; border-bottom-right-radius: 18px; margin-right: 20px; padding-left: 35px; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02); }
+        .nav-item a i.icon { font-size: 20px; width: 26px; text-align: center; color: #434850; }
+        .nav-item.active a i.icon { color: #11161e; }
+        .sidebar-footer { margin-top: auto; }
+        .logout-btn { display: flex; align-items: center; gap: 20px; padding: 15px 35px; color: #434850; text-decoration: none; font-size: 16px; font-weight: 600; }
         
-        .sidebar-header {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            margin-bottom: 35px;
-            width: 100%;
-            position: relative;
-            padding: 0 20px;
-        }
-        
-        .logo-container {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 100%;
-        }
-        
-        .logo-img {
-            max-width: 140px;
-            height: auto;
-            transition: max-width 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s ease;
-        }
-        
-        .sidebar-toggle-btn {
-            position: absolute;
-            top: 10px;
-            right: -13px;
-            width: 26px;
-            height: 26px;
-            border-radius: 50%;
-            background-color: #ffffff;
-            border: none;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.12);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            z-index: 100;
-            color: #52525b;
-        }
-        
-        .sidebar-toggle-btn i {
-            font-size: 11px;
-            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        
-        .nav-links {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-            flex-grow: 1;
-        }
-        
-        .nav-item {
-            width: 100%;
-        }
-        
-        .nav-item a {
-            display: flex;
-            align-items: center;
-            gap: 20px;
-            padding: 15px 35px;
-            color: #434850; 
-            text-decoration: none;
-            font-size: 16px;
-            font-weight: 600;
-            transition: color 0.2s;
-        }
-        
-        .nav-item.active a {
-            background-color: #ffffff;
-            color: #11161e;
-            border-top-right-radius: 18px;
-            border-bottom-right-radius: 18px;
-            margin-right: 20px;
-            padding-left: 35px;
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
-        }
-        
-        .nav-item a i.icon {
-            font-size: 20px;
-            width: 26px;
-            text-align: center;
-            color: #434850;
-        }
-        
-        .nav-item.active a i.icon {
-            color: #11161e;
-        }
-        
-        .sidebar-footer {
-            margin-top: auto;
-        }
-        
-        .logout-btn {
-            display: flex;
-            align-items: center;
-            gap: 20px;
-            padding: 15px 35px;
-            color: #434850;
-            text-decoration: none;
-            font-size: 16px;
-            font-weight: 600;
-        }
-        
-        /* MINIMIZED STATE TRANSITIONS */
-        .sidebar-minimized .sidebar {
-            padding: 45px 0 35px 0;
-        }
-        
-        .sidebar-minimized .sidebar .logo-img {
-            max-width: 40px; 
-            transform: scale(1);
-        }
-        
-        .sidebar-minimized .sidebar .nav-item a span,
-        .sidebar-minimized .sidebar .logout-btn span {
-            display: none;
-        }
-        
-        .sidebar-minimized .sidebar .nav-item a {
-            justify-content: center;
-            padding: 15px 0;
-        }
-        
-        .sidebar-minimized .sidebar .nav-item.active a {
-            margin-right: 10px;
-            padding-left: 0;
-            border-radius: 0 16px 16px 0;
-        }
-        
-        .sidebar-minimized .sidebar .logout-btn {
-            justify-content: center;
-            padding: 15px 0;
-        }
-        
-        .sidebar-minimized .sidebar-toggle-btn i {
-            transform: rotate(180deg);
-        }
+        .sidebar-minimized .sidebar { padding: 45px 0 35px 0; }
+        .sidebar-minimized .sidebar .logo-img { max-width: 40px; transform: scale(1); }
+        .sidebar-minimized .sidebar .nav-item a span, .sidebar-minimized .sidebar .logout-btn span { display: none; }
+        .sidebar-minimized .sidebar .nav-item a { justify-content: center; padding: 15px 0; }
+        .sidebar-minimized .sidebar .nav-item.active a { margin-right: 10px; padding-left: 0; border-radius: 0 16px 16px 0; }
+        .sidebar-minimized .sidebar .logout-btn { justify-content: center; padding: 15px 0; }
+        .sidebar-minimized .sidebar-toggle-btn i { transform: rotate(180deg); }
     </style>
 </head>
 <body>
@@ -322,7 +234,7 @@ $svg_area_fill_path = $svg_points_path . " L 475,180 L 25,180 Z";
             ['id' => 'employee',    'href' => 'employee.php',    'icon' => 'fa-users-rectangle',         'label' => 'Employee'],
             ['id' => 'biometric',   'href' => 'biometrics.php',   'icon' => 'fa-fingerprint',             'label' => 'Biometric Enrollment'],
             ['id' => 'timekeeping', 'href' => 'timekeeping.php', 'icon' => 'fa-clipboard-user',          'label' => 'Timekeeping'],
-            ['id' => 'shift',       'href' => '#',               'icon' => 'fa-right-left',              'label' => 'Shift Configuration'],
+            ['id' => 'shift',       'href' => 'shift_management.php', 'icon' => 'fa-right-left',         'label' => 'Shift Configuration'],
             ['id' => 'leave',       'href' => 'leave.php',       'icon' => 'fa-user-gear',               'label' => 'Leave Management'],
             ['id' => 'internship',  'href' => '#',               'icon' => 'fa-cubes',                   'label' => 'Internship Registry'],
             ['id' => 'audit',       'href' => '#',               'icon' => 'fa-square-poll-horizontal',  'label' => 'System Audit'],
@@ -368,7 +280,6 @@ $svg_area_fill_path = $svg_points_path . " L 475,180 L 25,180 Z";
             </div>
 
             <div class="dashboard-row-layout">
-                <!-- CLEAN UPDATED CARDS GRID -->
                 <div class="metrics-straight-row">
                     <div class="card">
                         <div class="card-header">
@@ -416,58 +327,71 @@ $svg_area_fill_path = $svg_points_path . " L 475,180 L 25,180 Z";
                 </div>
 
                 <div class="bottom-content-area">
-                    <div class="analytics-card">
-                        <div class="analytics-header">
-                            <span class="analytics-title">Attendance Overview</span>
-                            <select class="analytics-dropdown">
-                                <option>Last 6 months</option>
-                            </select>
+                    <div class="analytics-container-column">
+                        
+                        <!-- UPPER CARD: KPI PERFORMANCE -->
+                        <div class="kpi-card">
+                            <div class="kpi-header">
+                                <div class="kpi-title-block">
+                                    <i class="fa-solid fa-chart-line"></i>
+                                    <span>Attendance performance</span>
+                                </div>
+                                <!-- UPDATED: Clean interactive select class config with standard dropdown action handles -->
+                                <select class="analytics-dropdown" id="analyticsPeriodSelector">
+                                    <option value="6" selected>Last 6 months</option>
+                                    <option value="3">Last 3 months</option>
+                                    <option value="12">Last 12 months</option>
+                                </select>
+                            </div>
+                            
+                            <div class="kpi-value-block">
+                                <div class="kpi-percentage">90.75%</div>
+                                <div class="kpi-trend"><i class="fa-solid fa-arrow-up"></i> +20% <span>vs last month</span></div>
+                            </div>
+
+                            <div class="kpi-bar-chart">
+                                <?php for($i = 0; $i < 6; $i++): 
+                                    $monthName = isset($graph_months[$i]) ? $graph_months[$i] : '--';
+                                    $attendanceCount = isset($graph_counts[$i]) ? $graph_counts[$i] : 0;
+                                    // Map row heights cleanly against the max recorded count
+                                    $percentageHeight = ($attendanceCount / $max_recorded_value) * 100;
+                                    if($percentageHeight < 10 && $attendanceCount > 0) $percentageHeight = 15; 
+                                ?>
+                                    <div class="bar-wrapper">
+                                        <div class="bar-column-fill" style="height: <?php echo $percentageHeight; ?>%;" title="Total: <?php echo $attendanceCount; ?>"></div>
+                                        <span class="bar-label"><?php echo $monthName; ?></span>
+                                    </div>
+                                <?php endfor; ?>
+                            </div>
                         </div>
-                        <div class="chart-container">
-                            <svg viewBox="0 0 500 200" width="100%" height="100%" style="overflow: visible; max-height: 100%;">
-                                <defs>
-                                    <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="0%" stop-color="#a855f7" stop-opacity="0.4"/>
-                                        <stop offset="100%" stop-color="#3b82f6" stop-opacity="0.0"/>
-                                    </linearGradient>
-                                </defs>
 
-                                <line x1="0" y1="20" x2="500" y2="20" stroke="#f1f5f9" stroke-width="1" />
-                                <line x1="0" y1="60" x2="500" y2="60" stroke="#f1f5f9" stroke-width="1" />
-                                <line x1="0" y1="100" x2="500" y2="100" stroke="#f1f5f9" stroke-width="1" />
-                                <line x1="0" y1="140" x2="500" y2="140" stroke="#f1f5f9" stroke-width="1" />
-                                <line x1="0" y1="180" x2="500" y2="180" stroke="#f1f5f9" stroke-width="1" />
+                        <!-- LOWER CARD: RECENT ACTIVITY (TIME WORKED SLIDER) -->
+                        <div class="recent-activity-timeline-card">
+                            <div class="timeline-header">
+                                <div class="timeline-title">
+                                    <i class="fa-regular fa-clock"></i>
+                                    <span>Recent activity</span>
+                                </div>
+                                <button type="button" class="timeline-menu-btn"><i class="fa-solid fa-ellipsis"></i></button>
+                            </div>
 
-                                <line x1="25" y1="20" x2="25" y2="180" stroke="#f1f5f9" stroke-width="1" />
-                                <line x1="115" y1="20" x2="115" y2="180" stroke="#f1f5f9" stroke-width="1" />
-                                <line x1="205" y1="20" x2="205" y2="180" stroke="#f1f5f9" stroke-width="1" />
-                                <line x1="295" y1="20" x2="295" y2="180" stroke="#f1f5f9" stroke-width="1" />
-                                <line x1="385" y1="20" x2="385" y2="180" stroke="#f1f5f9" stroke-width="1" />
-                                <line x1="475" y1="20" x2="475" y2="180" stroke="#f1f5f9" stroke-width="1" />
+                            <div class="total-worked-label">Total time worked</div>
+                            <div class="total-worked-duration"><strong>12</strong> hours <strong>27</strong> minutes</div>
 
-                                <path d="<?php echo $svg_area_fill_path; ?>" fill="url(#chartGradient)" />
-                                <path d="<?php echo $svg_points_path; ?>" fill="none" stroke="url(#chartGradient)" stroke-width="3" />
+                            <!-- Configurable Stacked Tracking Row CSS -->
+                            <div class="stacked-progress-bar">
+                                <div class="progress-slice slice-pause" style="width: 15%;" title="Pause Time"></div>
+                                <div class="progress-slice slice-active" style="width: 75%;" title="Active Time"></div>
+                                <div class="progress-slice slice-extra" style="width: 10%;" title="Extra Time"></div>
+                            </div>
 
-                                <circle cx="475" cy="<?php echo $y_positions[5]; ?>" r="5" fill="#3b82f6" stroke="#ffffff" stroke-width="2" />
-                                <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-                                    <feDropShadow dx="0" dy="2" stdDeviation="2" flood-opacity="0.1" />
-                                </filter>
-                                
-                                <rect x="445" y="<?php echo ($y_positions[5] - 35); ?>" width="50" height="24" rx="12" fill="#ffffff" filter="url(#shadow)" />
-                                <text x="470" y="<?php echo ($y_positions[5] - 19); ?>" font-size="11" font-weight="600" fill="#3b82f6" text-anchor="middle"><?php echo $graph_counts[5]; ?></text>
-
-                                <text x="-15" y="24" font-size="11" fill="#94a3b8" text-anchor="end"><?php echo $max_recorded_value; ?></text>
-                                <text x="-15" y="104" font-size="11" fill="#94a3b8" text-anchor="end"><?php echo round($max_recorded_value / 2); ?></text>
-                                <text x="-15" y="184" font-size="11" fill="#94a3b8" text-anchor="end">0</text>
-
-                                <text x="25" y="202" font-size="12" fill="#94a3b8" text-anchor="middle"><?php echo $graph_months[0]; ?></text>
-                                <text x="115" y="202" font-size="12" fill="#94a3b8" text-anchor="middle"><?php echo $graph_months[1]; ?></text>
-                                <text x="205" y="202" font-size="12" fill="#94a3b8" text-anchor="middle"><?php echo $graph_months[2]; ?></text>
-                                <text x="295" y="202" font-size="12" fill="#94a3b8" text-anchor="middle"><?php echo $graph_months[3]; ?></text>
-                                <text x="385" y="202" font-size="12" fill="#94a3b8" text-anchor="middle"><?php echo $graph_months[4]; ?></text>
-                                <text x="475" y="202" font-size="12" fill="#94a3b8" text-anchor="middle"><?php echo $graph_months[5]; ?></text>
-                            </svg>
+                            <div class="progress-legends">
+                                <div class="legend-item"><div class="legend-dot" style="background-color: #f59e0b;"></div>Pause Time</div>
+                                <div class="legend-item"><div class="legend-dot" style="background-color: #38bdf8;"></div>Active Time</div>
+                                <div class="legend-item"><div class="legend-dot" style="background-color: #8b5cf6;"></div>Extra Time</div>
+                            </div>
                         </div>
+
                     </div>
 
                     <div class="right-sidebar-column">
@@ -515,12 +439,21 @@ $svg_area_fill_path = $svg_points_path . " L 475,180 L 25,180 Z";
     <script src="assets/js/app.js"></script>
     <script>
         document.addEventListener("DOMContentLoaded", function() {
-            // Sidebar collapse handler toggle script logic
             const toggleSidebarBtn = document.getElementById('toggleSidebarBtn');
             if (toggleSidebarBtn) {
                 toggleSidebarBtn.addEventListener('click', function() {
                     const isMinimized = document.documentElement.classList.toggle('sidebar-minimized');
                     localStorage.setItem('sidebarMinimized', isMinimized);
+                });
+            }
+
+            // ADDED: Added functional change listener targeting metric filtering actions
+            const periodSelector = document.getElementById('analyticsPeriodSelector');
+            if (periodSelector) {
+                periodSelector.addEventListener('change', function() {
+                    const selectedMonths = this.value;
+                    console.log("Filtering attendance timeline view to the last " + selectedMonths + " months.");
+                    // Dynamic analytical URL updates or API requests can follow here
                 });
             }
 
@@ -557,7 +490,6 @@ $svg_area_fill_path = $svg_points_path . " L 475,180 L 25,180 Z";
             refreshDashboardStats();
             setInterval(refreshDashboardStats, 30000);
 
-            // Calendar ribbon view builder logic
             const realToday = new Date(); let currentSelectedDate = new Date(realToday); let dayOffsetValue = 0; 
             function renderCalendarView() {
                 const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];

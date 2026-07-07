@@ -33,7 +33,6 @@ $employees = $employeeService->getAll('', 100, 0);
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { background-color: #f8f9fa; font-family: 'Inter', sans-serif; padding: 20px; height: 100vh; overflow: hidden; }
         
-        /* Layout Grid System (EXACTLY MATCHED TO INDEX.PHP) */
         .app-container { 
             display: grid; 
             grid-template-columns: 310px 1fr; 
@@ -44,7 +43,6 @@ $employees = $employeeService->getAll('', 100, 0);
             transition: grid-template-columns 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         
-        /* Handle minimized state grid column switch */
         .sidebar-minimized .app-container {
             grid-template-columns: 85px 1fr;
         }
@@ -89,7 +87,6 @@ $employees = $employeeService->getAll('', 100, 0);
         .btn-filter, .btn-export { background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 14px; font-size: 13px; font-weight: 500; color: #475569; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s; text-decoration: none; }
         .btn-filter:hover, .btn-export:hover { background-color: #f8f9fa; border-color: #cbd5e1; color: #475569; }
         
-        /* Remove Bootstrap dropdown default arrow down symbol */
         .btn-export.dropdown-toggle::after { display: none !important; }
         .dropdown-menu { border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); border: 1px solid #e2e8f0; padding: 4px 0; }
         .dropdown-item { font-size: 13px; padding: 8px 16px; color: #334155; }
@@ -164,7 +161,7 @@ $employees = $employeeService->getAll('', 100, 0);
         $navItems = [
             ['id' => 'dashboard',   'href' => 'index.php',       'icon' => 'fa-table-cells-large',       'label' => 'Dashboard'],
             ['id' => 'employee',    'href' => 'employee.php',    'icon' => 'fa-users-rectangle',         'label' => 'Employee'],
-            ['id' => 'biometric',   'href' => 'biometrics.php',               'icon' => 'fa-fingerprint',             'label' => 'Biometric Enrollment'],
+            ['id' => 'biometric',   'href' => 'biometrics.php',  'icon' => 'fa-fingerprint',             'label' => 'Biometric Enrollment'],
             ['id' => 'timekeeping', 'href' => 'timekeeping.php', 'icon' => 'fa-clipboard-user',          'label' => 'Timekeeping'],
             ['id' => 'shift',       'href' => '#',               'icon' => 'fa-right-left',              'label' => 'Shift Configuration'],
             ['id' => 'leave',       'href' => 'leave.php',       'icon' => 'fa-user-gear',               'label' => 'Leave Management'],
@@ -268,7 +265,6 @@ $employees = $employeeService->getAll('', 100, 0);
                             <div class="action-buttons-group">
                                 <button class="btn-filter"><i class="fa-solid fa-sliders"></i> Filter</button>
                                 
-                                <!-- Updated Unified Export Selector Dropdown Component -->
                                 <div class="dropdown d-inline-block">
                                     <button class="btn-export dropdown-toggle" type="button" id="exportDropdownButton" data-bs-toggle="dropdown" aria-expanded="false">
                                         <i class="fa-solid fa-download"></i> Export
@@ -391,6 +387,11 @@ $employees = $employeeService->getAll('', 100, 0);
                         <div class="mb-3">
                             <label for="emp_name" class="form-label">Full Name</label>
                             <input type="text" class="form-control" id="emp_name" name="name" required placeholder="e.g. John Doe">
+                        </div>
+                        <!-- NEW EMAIL FIELD INCLUDED HERE -->
+                        <div class="mb-3">
+                            <label for="emp_email" class="form-label">Email Address</label>
+                            <input type="email" class="form-control" id="emp_email" name="email" required placeholder="e.g. johndoe@example.com">
                         </div>
                         <div class="mb-3">
                             <label for="emp_id" class="form-label">Employee ID</label>

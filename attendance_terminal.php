@@ -27,7 +27,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['rfid_uid'])) {
     $attendanceEngine = new Attendance($dbConnection);
     
     // 1. First, try an exact match (handles text/varchar columns with leading zeros)
-    $sql = "SELECT name FROM users WHERE biometric_rfid = ?";
+    $sql = "SELECT id, name FROM users WHERE biometric_rfid = ?";
     $stmt = $dbConnection->prepare($sql);
     $stmt->bind_param("s", $rfid_uid);
     $stmt->execute();
