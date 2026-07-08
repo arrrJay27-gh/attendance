@@ -66,9 +66,10 @@ class Dashboard
 
     public function getRecentActivity($limit = 4)
     {
+        // Fixed: changed a.employee_table_id to a.employee_id
         $sql = "SELECT e.name, a.status, a.time_in, a.date_record
                 FROM attendance a
-                INNER JOIN employees e ON e.id = a.employee_table_id
+                INNER JOIN employees e ON e.id = a.employee_id
                 ORDER BY a.id DESC
                 LIMIT ?";
         $stmt = $this->db->prepare($sql);
@@ -85,7 +86,8 @@ class Dashboard
 
     private function countByStatus($date, $status)
     {
-        $sql = "SELECT COUNT(DISTINCT employee_table_id) AS total
+        // Fixed: changed employee_table_id to employee_id
+        $sql = "SELECT COUNT(DISTINCT employee_id) AS total
                 FROM attendance
                 WHERE date_record = ? AND status = ?";
         $stmt = $this->db->prepare($sql);
@@ -102,7 +104,8 @@ class Dashboard
         $res = $this->db->query($sql);
         $totalActive = (int) (($res && $row = $res->fetch_assoc()) ? $row['total'] : 0);
 
-        $sqlChecked = "SELECT COUNT(DISTINCT employee_table_id) AS total
+        // Fixed: changed employee_table_id to employee_id
+        $sqlChecked = "SELECT COUNT(DISTINCT employee_id) AS total
                        FROM attendance
                        WHERE date_record = ? AND status IN ('Present', 'Late')";
         $stmt = $this->db->prepare($sqlChecked);

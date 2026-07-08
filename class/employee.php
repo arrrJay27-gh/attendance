@@ -68,18 +68,60 @@ class Employee
 
     public function create($name, $employeeId, $position, $department, $employmentType = 'Full-time', $email = '', $status = 'Active')
     {
+        // 1. If employee ID is empty, generate it before processing so both tables match
         if ($employeeId === '') {
             $employeeId = 'EMP-' . date('Ymd') . '-' . sprintf('%03d', rand(1, 999));
         }
 
-        $sql = "INSERT INTO employees (employee_id, name, email, department, position, employment_type, status)
-                VALUES (?, ?, ?, ?, ?, ?, ?)";
-        $stmt = $this->db->prepare($sql);
-        $stmt->bind_param('sssssss', $employeeId, $name, $email, $department, $position, $employmentType, $status);
-        $ok = $stmt->execute();
-        $newId = $ok ? $this->db->insert_id : false;
-        $stmt->close();
-        return $newId;
+        // 2. Start database transaction to keep tables synchronized
+        $this->db->begin_transaction();
+
+        try {
+            // --- STEP 1: Insert into employees table ---
+            $sql = "INSERT INTO employees (employee_id, name, email, department, position, employment_type, status)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)";
+            $stmt = $this->db->prepare($sql);
+            if (!$stmt) {
+                throw new Exception("Employees query preparation failed: " . $this->db->error);
+            }
+
+            $stmt->bind_param('sssssss', $employeeId, $name, $email, $department, $position, $employmentType, $status);
+            $ok = $stmt->execute();
+            $newId = $ok ? $this->db->insert_id : false;
+            $stmt->close();
+
+            if (!$newId) {
+                throw new Exception("Failed to insert into employees table.");
+            }
+
+            // --- STEP 2: Insert into users table ---
+            // Build fallback defaults required by your users database structure
+            $username = 'user_' . strtolower(str_replace(' ', '', $name));
+            $role = 'employee';
+
+            $userSql = "INSERT INTO users (employee_id, name, username, role, email) VALUES (?, ?, ?, ?, ?)";
+            $userStmt = $this->db->prepare($userSql);
+            if (!$userStmt) {
+                throw new Exception("Users query preparation failed: " . $this->db->error);
+            }
+
+            $userStmt->bind_param('sssss', $employeeId, $name, $username, $role, $email);
+            $userOk = $userStmt->execute();
+            $userStmt->close();
+
+            if (!$userOk) {
+                throw new Exception("Failed to insert into users table.");
+            }
+
+            // 3. Commit transaction if both targets write successfully
+            $this->db->commit();
+            return $newId;
+
+        } catch (Exception $e) {
+            // 4. Discard any changes if any table save step crashes
+            $this->db->rollback();
+            return false;
+        }
     }
 
     public function update($id, $employeeId, $name, $department, $position, $status = 'Active')

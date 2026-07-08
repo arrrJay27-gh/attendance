@@ -99,20 +99,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     }
     
     $empId       = intval($_POST['employee_id']);
-    $startTime12 = $_POST['start_time'] ?? '';
-    $endTime12   = $_POST['end_time'] ?? '';
-    $role        = $_POST['role'] ?? 'Chief';
+    $startTimeText = $_POST['start_time'] ?? '';
+    $endTimeText   = $_POST['end_time'] ?? '';
+    $role        = $_POST['role'] ?? 'Programming';
     
-    $startTime24 = date("H:i:00", strtotime($startTime12));
-    $endTime24   = date("H:i:00", strtotime($endTime12));
+    // Robust conversion to standard 24-hour time format for DB storage
+    $startTime24 = date("H:i:00", strtotime($startTimeText));
+    $endTime24   = date("H:i:00", strtotime($endTimeText));
 
+    // Dynamic Color Coding based on IT and Computer Science Responsibilities
     $colorClass = 'bg-blue';
-    if (strtolower($role) === 'chief') $colorClass = 'bg-yellow';
-    elseif (strtolower($role) === 'barista') $colorClass = 'bg-green';
-    elseif (strtolower($role) === 'waiter') $colorClass = 'bg-purple';
-    elseif (strtolower($role) === 'line cook') $colorClass = 'bg-yellow';
+    $normalizedRole = strtolower($role);
+    if ($normalizedRole === 'web design') $colorClass = 'bg-yellow';
+    elseif ($normalizedRole === 'programming') $colorClass = 'bg-green';
+    elseif ($normalizedRole === 'deployment') $colorClass = 'bg-purple';
+    elseif ($normalizedRole === 'database') $colorClass = 'bg-blue';
+    elseif ($normalizedRole === 'system admin') $colorClass = 'bg-purple';
+    elseif ($normalizedRole === 'tech support') $colorClass = 'bg-green';
+    elseif ($normalizedRole === 'cybersecurity') $colorClass = 'bg-yellow';
 
-    // Fetch employee name via prepared statement from the employees table to sync with employee_shifts table
+    // Fetch employee name via prepared statement
     $empName = "";
     $fetchEmpStmt = $conn->prepare("SELECT name FROM employees WHERE id = ?");
     $fetchEmpStmt->bind_param("i", $empId);
@@ -184,10 +190,6 @@ $attendanceService = new Attendance($conn);
 
 $today = date('Y-m-d');
 $stats = $dashboard->getTodayStats($today);
-$presentCount = $stats['present'];
-$lateCount = $stats['late'];
-$absentCount = $stats['absent'];
-$avgTimeValue = $stats['avg_check_in'];
 $departments = $attendanceService->getDepartments();
 
 // ==========================================================================
@@ -230,7 +232,7 @@ if ($empResult && $empResult->num_rows > 0) {
     }
 }
 
-// Query current shift logs (Selecting ID to support modifications)
+// Query current shift logs
 $shiftQuery = "SELECT id, employee_id, shift_date, start_time, end_time, role, color_class FROM employee_shifts WHERE shift_date BETWEEN '$startOfWeek' AND '$endOfWeek'";
 $shiftResult = $conn->query($shiftQuery);
 
@@ -302,173 +304,39 @@ if ($shiftResult && $shiftResult->num_rows > 0) {
             overflow-y: auto; 
         }
 
-        /* ==================================================================
-           SIDEBAR STYLES (MATCHED EXACTLY TO PREVENT JUMPING)
-           ================================================================== */
+        /* Sidebar Styles */
         .sidebar {
-            width: 100%;
-            background-color: #dcdddf; 
-            border-radius: 36px;       
-            padding: 45px 0 35px 0;
-            display: flex;
-            flex-direction: column;
-            position: relative;
-            height: 100%;
+            width: 100%; background-color: #dcdddf; border-radius: 36px; padding: 45px 0 35px 0;
+            display: flex; flex-direction: column; position: relative; height: 100%;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        
-        .sidebar-header {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            margin-bottom: 35px;
-            width: 100%;
-            position: relative;
-            padding: 0 20px;
-        }
-        
-        .logo-container {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 100%;
-        }
-        
-        .logo-img {
-            max-width: 140px;
-            height: auto;
-            transition: max-width 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s ease;
-        }
+        .sidebar-header { display: flex; justify-content: center; align-items: center; margin-bottom: 35px; width: 100%; position: relative; padding: 0 20px; }
+        .logo-container { display: flex; align-items: center; justify-content: center; width: 100%; }
+        .logo-img { max-width: 140px; height: auto; transition: max-width 0.3s ease, transform 0.3s ease; }
         
         .sidebar-toggle-btn {
-            position: absolute;
-            top: 10px;
-            right: -13px;
-            width: 26px;
-            height: 26px;
-            border-radius: 50%;
-            background-color: #ffffff;
-            border: none;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.12);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            z-index: 100;
-            color: #52525b;
+            position: absolute; top: 10px; right: -13px; width: 26px; height: 26px; border-radius: 50%;
+            background-color: #ffffff; border: none; box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+            display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 100; color: #52525b;
         }
+        .sidebar-toggle-btn i { font-size: 11px; transition: transform 0.3s; }
         
-        .sidebar-toggle-btn i {
-            font-size: 11px;
-            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
+        .nav-links { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; flex-grow: 1; }
+        .nav-item { width: 100%; }
+        .nav-item a { display: flex; align-items: center; gap: 20px; padding: 15px 35px; color: #434850; text-decoration: none; font-size: 16px; font-weight: 600; }
+        .nav-item.active a { background-color: #ffffff; color: #11161e; border-top-right-radius: 18px; border-bottom-right-radius: 18px; margin-right: 20px; padding-left: 35px; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02); }
+        .nav-item a i.icon { font-size: 20px; width: 26px; text-align: center; color: #434850; }
+        .nav-item.active a i.icon { color: #11161e; }
+        .sidebar-footer { margin-top: auto; }
+        .logout-btn { display: flex; align-items: center; gap: 20px; padding: 15px 35px; color: #434850; text-decoration: none; font-size: 16px; font-weight: 600; }
         
-        .nav-links {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-            flex-grow: 1;
-        }
-        
-        .nav-item {
-            width: 100%;
-        }
-        
-        .nav-item a {
-            display: flex;
-            align-items: center;
-            gap: 20px;
-            padding: 15px 35px;
-            color: #434850; 
-            text-decoration: none;
-            font-size: 16px;
-            font-weight: 600;
-            transition: color 0.2s;
-        }
-        
-        .nav-item.active a {
-            background-color: #ffffff;
-            color: #11161e;
-            border-top-right-radius: 18px;
-            border-bottom-right-radius: 18px;
-            margin-right: 20px;
-            padding-left: 35px;
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
-        }
-        
-        .nav-item a i.icon {
-            font-size: 20px;
-            width: 26px;
-            text-align: center;
-            color: #434850;
-        }
-        
-        .nav-item.active a i.icon {
-            color: #11161e;
-        }
-        
-        .sidebar-footer {
-            margin-top: auto;
-        }
-        
-        .logout-btn {
-            display: flex;
-            align-items: center;
-            gap: 20px;
-            padding: 15px 35px;
-            color: #434850;
-            text-decoration: none;
-            font-size: 16px;
-            font-weight: 600;
-        }
-        
-        /* MINIMIZED SIDEBAR CONFIGURATIONS */
-        .sidebar-minimized .sidebar {
-            padding: 45px 0 35px 0;
-        }
-        
-        .sidebar-minimized .sidebar .logo-img {
-            max-width: 40px; 
-            transform: scale(1);
-        }
-        
-        .sidebar-minimized .sidebar .nav-item a span,
-        .sidebar-minimized .sidebar .logout-btn span {
-            display: none;
-        }
-        
-        .sidebar-minimized .sidebar .nav-item a {
-            justify-content: center;
-            padding: 15px 0;
-        }
-        
-        .sidebar-minimized .sidebar .nav-item.active a {
-            margin-right: 10px;
-            padding-left: 0;
-            border-radius: 0 16px 16px 0;
-        }
-        
-        .sidebar-minimized .sidebar .logout-btn {
-            justify-content: center;
-            padding: 15px 0;
-        }
-        
-        .sidebar-minimized .sidebar-toggle-btn i {
-            transform: rotate(180deg);
-        }
+        .sidebar-minimized .sidebar .logo-img { max-width: 40px; }
+        .sidebar-minimized .sidebar .nav-item a span, .sidebar-minimized .sidebar .logout-btn span { display: none; }
+        .sidebar-minimized .sidebar .nav-item a { justify-content: center; padding: 15px 0; }
+        .sidebar-minimized .sidebar .nav-item.active a { margin-right: 10px; padding-left: 0; border-radius: 0 16px 16px 0; }
+        .sidebar-minimized .sidebar-toggle-btn i { transform: rotate(180deg); }
 
-        /* Metric Rows */
-        .metrics-straight-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; width: 100%; }
-        .card { background-color: #ffffff; border-radius: 16px; padding: 16px 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); border: 1px solid #f1f3f5; display: flex; flex-direction: column; justify-content: space-between; height: 125px; }
-        .card-header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; border: none; background: transparent; padding: 0; }
-        .card-title { font-size: 13px; font-weight: 600; color: #1f2937; white-space: nowrap; }
-        .card-value { font-size: 28px; font-weight: 700; color: #111827; line-height: 1.1; }
-        .card-footer { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #6b7280; border: none; background: transparent; padding: 0; }
-
-        /* Attendance Core Block System */
+        /* Panel UI Design */
         .attendance-panel { background-color: #ffffff; border-radius: 16px; padding: 24px; width: 100%; box-shadow: 0 1px 3px rgba(0,0,0,0.02); border: 1px solid #f1f3f5; }
         .panel-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
         .panel-title { font-size: 18px; font-weight: 700; color: #1e293b; }
@@ -481,12 +349,10 @@ if ($shiftResult && $shiftResult->num_rows > 0) {
         .btn-action-outline { background-color: #ffffff; color: #475569; border: 1px solid #e2e8f0; padding: 10px 20px; border-radius: 12px; font-size: 14px; font-weight: 500; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
 
         .dropdown-menu-custom { border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 4px 12px rgba(0,0,0,0.05); padding: 6px; }
-        .dropdown-item-custom { display: flex; align-items: center; gap: 10px; padding: 10px 14px; font-size: 14px; font-weight: 500; color: #475569; border-radius: 8px; transition: all 0.15s ease; }
-        .dropdown-item-custom:hover { background-color: #f1f5f9; color: #1e293b; }
-
+        .dropdown-item-custom { display: flex; align-items: center; gap: 10px; padding: 10px 14px; font-size: 14px; font-weight: 500; color: #475569; border-radius: 8px; }
         .dropdown-toggle::after { display: none !important; }
 
-        /* Schedule Timeline Structural Frame */
+        /* Grid Configuration Elements */
         .custom-table-wrapper { overflow-x: auto; width: 100%; }
         .attendance-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; table-layout: fixed; }
         .attendance-table th, .attendance-table td { border: 1px solid #f1f5f9; padding: 12px; vertical-align: middle; position: relative; }
@@ -499,15 +365,13 @@ if ($shiftResult && $shiftResult->num_rows > 0) {
         .dept-sub-lbl { color: #94a3b8; font-size: 12px; }
         .emp-hrs-counter { font-size: 12px; color: #16a34a; font-weight: 600; }
 
-        /* Dynamic Shift Card Blocks */
+        /* Layout Cards Styles */
         .shift-card-block { border-radius: 8px; padding: 8px 10px; font-size: 11px; display: flex; flex-direction: column; gap: 3px; font-weight: 600; position: relative; cursor: pointer; transition: transform 0.15s ease; }
         .shift-card-block:hover { transform: translateY(-1px); box-shadow: 0 2px 6px rgba(0,0,0,0.06); }
         .shift-time-hdr { display: flex; justify-content: space-between; font-weight: 700; font-size: 11px; align-items: center; width: 100%; }
         .shift-role-title { font-weight: 500; opacity: 0.9; }
-
-        .shift-edit-pencil-icon { font-size: 10px; opacity: 0; transition: opacity 0.2s ease; margin-left: auto; cursor: pointer; }
-        .shift-card-block:hover .shift-edit-pencil-icon { opacity: 0.75; }
-        .shift-edit-pencil-icon:hover { opacity: 1 !important; scale: 1.1; }
+        .shift-edit-pencil-icon { font-size: 10px; opacity: 0; transition: opacity 0.2s ease; margin-left: auto; }
+        .shift-card-block:hover .shift-edit-pencil-icon { opacity: 1; }
 
         .bg-blue { background-color: #e0f2fe; color: #0369a1; border-left: 3px solid #0284c7; }
         .bg-green { background-color: #dcfce7; color: #15803d; border-left: 3px solid #16a34a; }
@@ -515,11 +379,10 @@ if ($shiftResult && $shiftResult->num_rows > 0) {
         .bg-yellow { background-color: #fef9c3; color: #a16207; border-left: 3px solid #ca8a04; }
 
         .empty-grid-block { min-height: 45px; width: 100%; display: flex; align-items: center; justify-content: center; }
-        
-        .btn-add-slot { border: 1px solid #cbd5e1; background-color: #ffffff; color: #3b82f6; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s ease-in-out; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .btn-add-slot { border: 1px solid #cbd5e1; background-color: #ffffff; color: #3b82f6; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s ease-in-out; }
         .btn-add-slot:hover { background-color: #3b82f6; color: #ffffff; border-color: #3b82f6; transform: scale(1.1); }
 
-        /* Modal Dialog Custom Layouts */
+        /* Modal Layout Core Elements */
         .modal-custom-shift .modal-content { border-radius: 16px; border: none; box-shadow: 0 10px 30px rgba(0,0,0,0.08); padding: 10px; }
         .modal-custom-shift .modal-header { border-bottom: none; padding: 16px 20px 8px 20px; }
         .modal-custom-shift .modal-title { font-size: 18px; font-weight: 600; color: #1e293b; }
@@ -528,43 +391,46 @@ if ($shiftResult && $shiftResult->num_rows > 0) {
         
         .shift-row-item { display: flex; align-items: center; gap: 16px; color: #64748b; }
         .shift-row-item i { font-size: 16px; width: 20px; text-align: center; }
-        .shift-time-input-group { display: flex; align-items: center; gap: 12px; flex-grow: 1; }
+        .shift-time-input-group { display: flex; align-items: center; gap: 12px; flex-grow: 1; position: relative; }
         
-        .shift-time-select-custom { border: 1px solid #cbd5e1; border-radius: 6px; padding: 6px 10px; font-weight: 500; color: #1e293b; font-size: 13px; background-color: #ffffff; outline: none; }
-        .shift-duration-lbl { margin-left: auto; font-size: 13px; color: #64748b; }
+        /* Dual Input Structure Container */
+        .hybrid-time-wrapper { position: relative; display: inline-block; width: 140px; }
+        .shift-time-select-custom { width: 100%; border: 1px solid #cbd5e1; border-radius: 6px; padding: 6px 30px 6px 12px; font-weight: 500; color: #1e293b; font-size: 14px; background-color: #ffffff; outline: none; transition: border-color 0.15s ease; }
+        .shift-time-select-custom:focus { border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59,130,246,0.15); }
+        
+        /* Hidden HTML Dropdown setting trigger box style overlay */
+        .native-dropdown-picker { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; opacity: 0; cursor: pointer; z-index: 5; }
+        .dropdown-trigger-icon { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 13px; pointer-events: none; z-index: 2; }
+        
+        .shift-duration-lbl { margin-left: auto; font-size: 13px; color: #64748b; font-weight: 500; }
         .shift-label-text { color: #334155; font-weight: 500; }
         
-        .week-days-badge-row { display: flex; gap: 6px; margin-top: 5px; flex-wrap: wrap; align-items: center; }
-        .day-badge-pill { width: 36px; height: 36px; border-radius: 50%; border: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: center; font-size: 11px; color: #64748b; font-weight: 600; background-color: #ffffff; cursor: pointer; user-select: none; }
+        .week-days-badge-row { display: flex; gap: 6px; margin-top: 5px; flex-wrap: wrap; }
+        .day-badge-pill { width: 36px; height: 36px; border-radius: 50%; border: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: center; font-size: 11px; color: #64748b; font-weight: 600; cursor: pointer; user-select: none; }
         .day-badge-pill.active { background-color: #3b82f6; color: #ffffff; border-color: #3b82f6; }
-        .day-badge-pill-all { padding: 0 12px; height: 36px; border-radius: 20px; border: 1px solid #e2e8f0; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: #475569; background-color: #f1f5f9; cursor: pointer; user-select: none; }
+        .day-badge-pill-all { padding: 0 12px; height: 36px; border-radius: 20px; border: 1px solid #e2e8f0; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: #475569; background-color: #f1f5f9; cursor: pointer; }
         .day-badge-pill-all.active { background-color: #1e293b; color: #ffffff; border-color: #1e293b; }
 
         .btn-modal-cancel { background: none; border: none; color: #64748b; font-weight: 600; font-size: 14px; }
         .btn-modal-delete { background-color: #ef4444; color: #ffffff; border: none; border-radius: 6px; padding: 8px 16px; font-weight: 600; font-size: 14px; display: none; margin-right: auto; }
-        .btn-modal-delete:hover { background-color: #dc2626; }
         .btn-modal-save { background-color: #3b82f6; color: #ffffff; border: none; border-radius: 6px; padding: 8px 20px; font-weight: 600; font-size: 14px; }
         .role-select-input { border: 1px solid #cbd5e1; border-radius: 6px; padding: 6px 10px; font-size: 14px; color: #334155; outline: none; }
-        
-        .modal-date-picker { border: 1px solid #cbd5e1; border-radius: 6px; padding: 6px 12px; color: #334155; font-weight: 500; font-size: 13px; outline: none; background: #ffffff; cursor: pointer; width: 170px; transition: border-color 0.15s ease-in-out; }
-        .modal-date-picker:focus { border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59,130,246,0.15); }
+        .modal-date-picker { border: 1px solid #cbd5e1; border-radius: 6px; padding: 6px 12px; color: #334155; font-weight: 500; font-size: 13px; background: #ffffff; outline: none; }
 
         @media print {
             body { background: #ffffff; padding: 0; margin: 0; height: auto; overflow: visible; }
-            .sidebar, .metrics-straight-row, .table-controls-strip, .btn-add-slot, .sidebar-toggle-btn, .shift-edit-pencil-icon { display: none !important; }
+            .sidebar, .table-controls-strip, .btn-add-slot, .sidebar-toggle-btn, .shift-edit-pencil-icon { display: none !important; }
             .app-container { grid-template-columns: 1fr !important; gap: 0 !important; height: auto !important; }
             .attendance-panel { border: none !important; box-shadow: none !important; padding: 0 !important; }
             .attendance-table th:first-child, .attendance-table td:first-child { position: static !important; box-shadow: none !important; }
-            .custom-table-wrapper { overflow: visible !important; }
         }
     </style>
 </head>
 <body>
 
     <div class="app-container">
-        <!-- SIDEBAR ARRAYS -->
+        <!-- SIDEBAR ITEMS -->
         <?php
-        $imgPrefix = $imgPrefix ?? '';
         $navItems = [
             ['id' => 'dashboard',   'href' => 'index.php',             'icon' => 'fa-table-cells-large',       'label' => 'Dashboard'],
             ['id' => 'employee',    'href' => 'employee.php',          'icon' => 'fa-users-rectangle',         'label' => 'Employee'],
@@ -581,10 +447,10 @@ if ($shiftResult && $shiftResult->num_rows > 0) {
         <nav class="sidebar" id="sidebarContainer">
             <div class="sidebar-header">
                 <div class="logo-container">
-                    <img src="<?php echo htmlspecialchars($imgPrefix); ?>img/kiwi.png" alt="KIWI DIGITAL TECH INC." class="logo-img">
+                    <img src="img/kiwi.png" alt="KIWI DIGITAL TECH INC." class="logo-img">
                 </div>
-                <button type="button" class="sidebar-toggle-btn" id="toggleSidebarBtn" aria-label="Toggle sidebar">
-                    <i class="fa-solid fa-chevron-left" id="toggleIcon"></i>
+                <button type="button" class="sidebar-toggle-btn" id="toggleSidebarBtn">
+                    <i class="fa-solid fa-chevron-left"></i>
                 </button>
             </div>
 
@@ -607,7 +473,7 @@ if ($shiftResult && $shiftResult->num_rows > 0) {
             </div>
         </nav>
 
-        <!-- MAIN CONTENT AREA -->
+        <!-- MAIN WINDOW VIEW SYSTEM CONTAINER -->
         <main class="main-content">
             <div class="attendance-panel">
                 <div class="panel-header-row">
@@ -618,20 +484,12 @@ if ($shiftResult && $shiftResult->num_rows > 0) {
                     <div class="filter-group-left"><div class="table-search-box"><i class="fa-solid fa-magnifying-glass"></i><input type="text" placeholder="Search operational schedules..."></div></div>
                     <div class="action-group-right">
                         <div class="dropdown d-inline-block">
-                            <button type="button" class="btn-action-outline dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                            <button type="button" class="btn-action-outline dropdown-toggle" data-bs-toggle="dropdown">
                                 <i class="fa-solid fa-download"></i> Export
                             </button>
                             <ul class="dropdown-menu dropdown-menu-end dropdown-menu-custom">
-                                <li>
-                                    <a class="dropdown-item dropdown-item-custom" href="shift_management.php?export=csv">
-                                        <i class="fa-solid fa-file-csv text-success" style="font-size: 16px;"></i> Download CSV
-                                    </a>
-                                </li>
-                                <li>
-                                    <a class="dropdown-item dropdown-item-custom" href="#" id="btnPrintPDF">
-                                        <i class="fa-solid fa-file-pdf text-danger" style="font-size: 16px;"></i> Download PDF
-                                    </a>
-                                </li>
+                                <li><a class="dropdown-item dropdown-item-custom" href="shift_management.php?export=csv"><i class="fa-solid fa-file-csv text-success"></i> Download CSV</a></li>
+                                <li><a class="dropdown-item dropdown-item-custom" href="#" id="btnPrintPDF"><i class="fa-solid fa-file-pdf text-danger"></i> Download PDF</a></li>
                             </ul>
                         </div>
                         <button type="button" class="btn-action-outline"><i class="fa-solid fa-sliders"></i> Filter</button>
@@ -732,17 +590,22 @@ if ($shiftResult && $shiftResult->num_rows > 0) {
                         <div class="shift-row-item">
                             <i class="fa-regular fa-clock"></i>
                             <div class="shift-time-input-group">
-                                <select name="start_time" id="formStartTime" class="shift-time-select-custom">
-                                    <?php for($h=1; $h<=12; $h++): foreach(['AM','PM'] as $p): $ts = sprintf("%02d:00 %s", $h, $p); ?>
-                                        <option value="<?php echo $ts; ?>"><?php echo $ts; ?></option>
-                                    <?php endforeach; endfor; ?>
-                                </select>
+                                <!-- START TIME HYBRID INPUT (TEXT + TIME DROPDOWN) -->
+                                <div class="hybrid-time-wrapper">
+                                    <input type="text" name="start_time" id="formStartTime" class="shift-time-select-custom" placeholder="e.g., 8:35 AM">
+                                    <i class="fa-regular fa-clock dropdown-trigger-icon"></i>
+                                    <input type="time" id="nativeStartPicker" class="native-dropdown-picker">
+                                </div>
+
                                 <i class="fa-solid fa-arrow-right" style="font-size: 11px; width: auto; color: #94a3b8;"></i>
-                                <select name="end_time" id="formEndTime" class="shift-time-select-custom">
-                                    <?php for($h=1; $h<=12; $h++): foreach(['AM','PM'] as $p): $ts = sprintf("%02d:00 %s", $h, $p); ?>
-                                        <option value="<?php echo $ts; ?>"><?php echo $ts; ?></option>
-                                    <?php endforeach; endfor; ?>
-                                </select>
+                                
+                                <!-- END TIME HYBRID INPUT (TEXT + TIME DROPDOWN) -->
+                                <div class="hybrid-time-wrapper">
+                                    <input type="text" name="end_time" id="formEndTime" class="shift-time-select-custom" placeholder="e.g., 5:45 PM">
+                                    <i class="fa-regular fa-clock dropdown-trigger-icon"></i>
+                                    <input type="time" id="nativeEndPicker" class="native-dropdown-picker">
+                                </div>
+
                                 <span class="shift-duration-lbl" id="formDurationLbl">Duration: --</span>
                             </div>
                         </div>
@@ -750,18 +613,21 @@ if ($shiftResult && $shiftResult->num_rows > 0) {
                         <div class="shift-row-item">
                             <i class="fa-regular fa-id-badge"></i>
                             <span class="shift-label-text d-flex align-items-center gap-2">
+                                <!-- UPDATED COMPUTER SCIENCE & IT WORK RELEVANT ROLES -->
                                 <select name="role" id="formRole" class="role-select-input">
-                                    <option value="Chief">Chief</option>
-                                    <option value="Waiter">Waiter</option>
-                                    <option value="Barista">Barista</option>
-                                    <option value="Line Cook">Line Cook</option>
+                                    <option value="Web Design">Web Design</option>
+                                    <option value="Programming">Programming</option>
+                                    <option value="Deployment">Deployment</option>
+                                    <option value="Database">Database</option>
+                                    <option value="System Admin">System Admin</option>
+                                    <option value="Tech Support">Tech Support</option>
+                                    <option value="Cybersecurity">Cybersecurity</option>
                                 </select>
                             </span>
                         </div>
 
                         <hr id="modalDividerRule" style="border-color: #f1f5f9; margin: 4px 0;">
 
-                        <!-- Multi-day section wrapper container -->
                         <div id="multiDaySelectionRow" class="shift-row-item align-items-start flex-column gap-2">
                             <span class="shift-label-text" style="font-size: 13px; color: #64748b;">Assign targets to multiple days:</span>
                             <div class="week-days-badge-row">
@@ -790,7 +656,6 @@ if ($shiftResult && $shiftResult->num_rows > 0) {
     <script src="bootstrap-5.3.5-dist/js/bootstrap.bundle.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Sidebar Layout Control Interaction Trigger
             const toggleBtn = document.getElementById('toggleSidebarBtn');
             if (toggleBtn) {
                 toggleBtn.addEventListener('click', function() {
@@ -799,7 +664,6 @@ if ($shiftResult && $shiftResult->num_rows > 0) {
                 });
             }
 
-            // PDF Trigger using native print layout window pipeline
             const printBtn = document.getElementById('btnPrintPDF');
             if (printBtn) {
                 printBtn.addEventListener('click', function(e) {
@@ -815,13 +679,15 @@ if ($shiftResult && $shiftResult->num_rows > 0) {
 
             const startTimeSelect = document.getElementById('formStartTime');
             const endTimeSelect = document.getElementById('formEndTime');
+            const nativeStartPicker = document.getElementById('nativeStartPicker');
+            const nativeEndPicker = document.getElementById('nativeEndPicker');
+            
             const durationLabel = document.getElementById('formDurationLbl');
             const modalDatePicker = document.getElementById('modalDatePicker');
             const hiddenShiftDate = document.getElementById('formShiftDate');
             const hiddenSelectedDates = document.getElementById('formSelectedDates');
             const btnSelectAllDays = document.getElementById('btnSelectAllDays');
             
-            // Edit DOM contextual tracking references
             const formActionContext = document.getElementById('formActionContext');
             const formShiftId = document.getElementById('formShiftId');
             const btnModalSubmitText = document.getElementById('btnModalSubmitText');
@@ -830,28 +696,143 @@ if ($shiftResult && $shiftResult->num_rows > 0) {
             const modalDividerRule = document.getElementById('modalDividerRule');
             const formRole = document.getElementById('formRole');
 
-            function calculate12HrDuration() {
-                const parseTime = (val) => {
-                    const [time, ampm] = val.split(' ');
-                    let [hrs, mins] = time.split(':').map(Number);
-                    if (ampm === 'PM' && hrs < 12) hrs += 12;
-                    if (ampm === 'AM' && hrs === 12) hrs = 0;
-                    return hrs * 60 + mins;
-                };
+            // NEW & IMPROVED REAL-TIME INTERPRETATION ENGINE FOR MANUAL TYPING
+            function parseAndFormatTimeInput(inputElement) {
+                let cleanVal = inputElement.value.trim().toLowerCase();
+                if (!cleanVal) return;
 
-                if(!startTimeSelect.value || !endTimeSelect.value) return;
+                // Remove all spaces, periods, and colons to extract clean numbers
+                cleanVal = cleanVal.replace(/[:.\s]/g, '');
 
-                const startTotal = parseTime(startTimeSelect.value);
-                const endTotal = parseTime(endTimeSelect.value);
-                let diff = endTotal - startTotal;
-                if (diff < 0) diff += 1440;
+                // Match strings like "835am", "545pm", "835a", "1745", etc.
+                let regexMatch = cleanVal.match(/^(\d{1,4})(am|pm|a|p)?$/);
+                
+                if (regexMatch) {
+                    let rawDigits = regexMatch[1];
+                    let ampmIndicator = regexMatch[2] || '';
+
+                    let hrs = 0;
+                    let mins = 0;
+
+                    if (rawDigits.length <= 2) {
+                        hrs = parseInt(rawDigits, 10);
+                        mins = 0;
+                    } else {
+                        hrs = parseInt(rawDigits.slice(0, -2), 10);
+                        mins = parseInt(rawDigits.slice(-2), 10);
+                    }
+
+                    // Map abbreviation markers to AM/PM string formats
+                    if (ampmIndicator === 'p' || ampmIndicator === 'pm') {
+                        ampmIndicator = 'PM';
+                    } else if (ampmIndicator === 'a' || ampmIndicator === 'am') {
+                        ampmIndicator = 'AM';
+                    }
+
+                    if (mins >= 0 && mins < 60) {
+                        // Guess indicator based on standard 24-hour patterns if missing
+                        if (!ampmIndicator) {
+                            if (hrs >= 12) {
+                                ampmIndicator = 'PM';
+                                if (hrs > 12) hrs -= 12;
+                            } else {
+                                ampmIndicator = 'AM';
+                                if (hrs === 0) hrs = 12;
+                            }
+                        } else {
+                            // Boundary enforcement for 12-hour typing
+                            if (hrs > 12) hrs = 12;
+                            if (hrs === 0) hrs = 12;
+                        }
+
+                        inputElement.value = `${hrs}:${String(mins).padStart(2, '0')} ${ampmIndicator}`;
+                        return;
+                    }
+                }
+                
+                // Fallback attempt through Javascript native parse loop
+                let sandboxDate = new Date(`2026-01-01 ${inputElement.value}`);
+                if (!isNaN(sandboxDate.getTime())) {
+                    let hrs = sandboxDate.getHours();
+                    let mins = sandboxDate.getMinutes();
+                    let ampm = hrs >= 12 ? 'PM' : 'AM';
+                    hrs = hrs % 12 || 12;
+                    inputElement.value = `${hrs}:${String(mins).padStart(2, '0')} ${ampm}`;
+                }
+            }
+
+            // Converts structured "8:35 AM" strings back into "08:35" 24h format for dropdown picker display synchronization
+            function syncTextToNativePicker(textVal, nativePicker) {
+                if(!textVal) return;
+                let sandboxDate = new Date(`2026-01-01 ${textVal}`);
+                if (!isNaN(sandboxDate.getTime())) {
+                    let hrs = String(sandboxDate.getHours()).padStart(2, '0');
+                    let mins = String(sandboxDate.getMinutes()).padStart(2, '0');
+                    nativePicker.value = `${hrs}:${mins}`;
+                }
+            }
+
+            function getMinutesFromRawText(timeString) {
+                if (!timeString) return 0;
+                let sandboxDate = new Date(`2026-01-01 ${timeString}`);
+                if (isNaN(sandboxDate.getTime())) return 0;
+                return sandboxDate.getHours() * 60 + sandboxDate.getMinutes();
+            }
+
+            function calculateDuration() {
+                const startMins = getMinutesFromRawText(startTimeSelect.value);
+                const endMins = getMinutesFromRawText(endTimeSelect.value);
+                
+                if (startMins === 0 && endMins === 0) {
+                    durationLabel.textContent = `Duration: --`;
+                    return;
+                }
+
+                let diff = endMins - startMins;
+                if (diff < 0) diff += 1440; // Overnight logic
 
                 const totalHrs = Math.round((diff / 60) * 10) / 10;
                 durationLabel.textContent = `Duration: ${totalHrs}h`;
             }
 
-            startTimeSelect.addEventListener('change', calculate12HrDuration);
-            endTimeSelect.addEventListener('change', calculate12HrDuration);
+            // --- EVENT LISTENERS FOR MANUAL TYPING ---
+            startTimeSelect.addEventListener('change', function() { 
+                parseAndFormatTimeInput(this); 
+                syncTextToNativePicker(this.value, nativeStartPicker);
+                calculateDuration(); 
+            });
+            startTimeSelect.addEventListener('blur', function() { 
+                parseAndFormatTimeInput(this); 
+                syncTextToNativePicker(this.value, nativeStartPicker);
+                calculateDuration(); 
+            });
+
+            endTimeSelect.addEventListener('change', function() { 
+                parseAndFormatTimeInput(this); 
+                syncTextToNativePicker(this.value, nativeEndPicker);
+                calculateDuration(); 
+            });
+            endTimeSelect.addEventListener('blur', function() { 
+                parseAndFormatTimeInput(this); 
+                syncTextToNativePicker(this.value, nativeEndPicker);
+                calculateDuration(); 
+            });
+
+            // --- EVENT LISTENERS FOR THE DROPDOWN CLOCK SETTING PICKERS ---
+            nativeStartPicker.addEventListener('input', function() {
+                if (this.value) {
+                    startTimeSelect.value = this.value;
+                    parseAndFormatTimeInput(startTimeSelect);
+                    calculateDuration();
+                }
+            });
+            nativeEndPicker.addEventListener('input', function() {
+                if (this.value) {
+                    endTimeSelect.value = this.value;
+                    parseAndFormatTimeInput(endTimeSelect);
+                    calculateDuration();
+                }
+            });
 
             function compileSelectedDays() {
                 const activeDates = [];
@@ -873,7 +854,6 @@ if ($shiftResult && $shiftResult->num_rows > 0) {
 
             modalDatePicker.addEventListener('change', function() {
                 hiddenShiftDate.value = this.value;
-                
                 if (formActionContext.value === 'create_shift') {
                     const dateObj = new Date(this.value + 'T00:00:00');
                     const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -889,7 +869,6 @@ if ($shiftResult && $shiftResult->num_rows > 0) {
             document.querySelectorAll('.day-badge-pill').forEach(pill => {
                 pill.addEventListener('click', function() {
                     if (formActionContext.value === 'update_shift') return; 
-                    
                     this.classList.toggle('active');
                     const activePills = document.querySelectorAll('.day-badge-pill.active');
                     if (activePills.length === 1) {
@@ -938,14 +917,9 @@ if ($shiftResult && $shiftResult->num_rows > 0) {
                         startTimeSelect.value = button.getAttribute('data-start-time');
                         endTimeSelect.value = button.getAttribute('data-end-time');
                         
-                        // Smart case-insensitive matching logic for roles
-                        const rawRole = button.getAttribute('data-role') || 'Chief';
+                        const rawRole = button.getAttribute('data-role') || 'Programming';
                         const optionToSelect = Array.from(formRole.options).find(opt => opt.value.toLowerCase() === rawRole.toLowerCase());
-                        if (optionToSelect) {
-                            formRole.value = optionToSelect.value;
-                        } else {
-                            formRole.value = 'Chief';
-                        }
+                        formRole.value = optionToSelect ? optionToSelect.value : 'Programming';
                         
                         hiddenSelectedDates.value = '';
                     } else {
@@ -957,9 +931,9 @@ if ($shiftResult && $shiftResult->num_rows > 0) {
                         multiDaySelectionRow.style.display = 'flex';
                         modalDividerRule.style.display = 'block';
 
-                        startTimeSelect.value = '08:00 AM';
-                        endTimeSelect.value = '05:00 PM';
-                        formRole.value = 'Chief';
+                        startTimeSelect.value = '8:35 AM';
+                        endTimeSelect.value = '5:45 PM';
+                        formRole.value = 'Programming';
 
                         const dayName = button.getAttribute('data-day-name');
                         document.querySelectorAll('.day-badge-pill').forEach(pill => {
@@ -968,11 +942,13 @@ if ($shiftResult && $shiftResult->num_rows > 0) {
                         compileSelectedDays();
                     }
                     
-                    calculate12HrDuration();
+                    // Synchronize UI dropdown maps instantly on structural reveal
+                    syncTextToNativePicker(startTimeSelect.value, nativeStartPicker);
+                    syncTextToNativePicker(endTimeSelect.value, nativeEndPicker);
+                    calculateDuration();
                 });
             }
 
-            // Dedicated Event Hook for handling removal context loops
             btnModalDelete.addEventListener('click', function() {
                 const shiftId = formShiftId.value;
                 if (!shiftId) return;
@@ -982,10 +958,7 @@ if ($shiftResult && $shiftResult->num_rows > 0) {
                     formData.append('action', 'delete_shift');
                     formData.append('shift_id', shiftId);
 
-                    fetch('shift_management.php', {
-                        method: 'POST',
-                        body: formData
-                    })
+                    fetch('shift_management.php', { method: 'POST', body: formData })
                     .then(res => res.json())
                     .then(data => {
                         if (data.success) {
@@ -995,7 +968,7 @@ if ($shiftResult && $shiftResult->num_rows > 0) {
                             alert('System Removal Error: ' + data.error);
                         }
                     })
-                    .catch(err => alert('Network pipeline configuration failed parsing action request log.'));
+                    .catch(err => alert('Network pipeline configuration failed.'));
                 }
             });
 
@@ -1003,22 +976,19 @@ if ($shiftResult && $shiftResult->num_rows > 0) {
             form.addEventListener('submit', function(e) {
                 e.preventDefault();
 
+                // Force layout validation checking blocks logic prior to deployment parsing
+                parseAndFormatTimeInput(startTimeSelect);
+                parseAndFormatTimeInput(endTimeSelect);
+
                 if (formActionContext.value === 'create_shift' && !hiddenSelectedDates.value && !modalDatePicker.value) {
                     alert('Please select or specify a valid shift configuration date.');
                     return;
                 }
 
-                fetch('shift_management.php', {
-                    method: 'POST',
-                    body: new FormData(form)
-                })
+                fetch('shift_management.php', { method: 'POST', body: new FormData(form) })
                 .then(async res => {
                     const text = await res.text();
-                    try {
-                        return JSON.parse(text);
-                    } catch (e) {
-                        throw new Error(text || 'Empty response from server.');
-                    }
+                    try { return JSON.parse(text); } catch (e) { throw new Error(text || 'Empty response.'); }
                 })
                 .then(data => {
                     if (data.success) {
@@ -1028,10 +998,7 @@ if ($shiftResult && $shiftResult->num_rows > 0) {
                         alert('System Process Error: ' + data.error);
                     }
                 })
-                .catch(err => {
-                    console.error("Server Output Log:", err.message);
-                    alert('Server Output Error:\n' + err.message);
-                });
+                .catch(err => alert('Server Output Error:\n' + err.message));
             });
         });
     </script>

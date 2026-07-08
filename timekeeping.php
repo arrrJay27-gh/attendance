@@ -38,7 +38,6 @@ $records = $attendanceService->getRecords('', '', $today);
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { background-color: #f8f9fa; font-family: 'Inter', sans-serif; padding: 20px; height: 100vh; overflow: hidden; }
         
-        /* Layout Grid System */
         .app-container { 
             display: grid; 
             grid-template-columns: 310px 1fr; 
@@ -63,9 +62,6 @@ $records = $attendanceService->getRecords('', '', $today);
             overflow-y: auto; 
         }
 
-        /* ==================================================================
-           SIDEBAR STYLES (MATCHED EXACTLY TO PREVENT JUMPING)
-           ================================================================== */
         .sidebar {
             width: 100%;
             background-color: #dcdddf; 
@@ -186,7 +182,6 @@ $records = $attendanceService->getRecords('', '', $today);
             font-weight: 600;
         }
         
-        /* MINIMIZED SIDEBAR CONFIGURATIONS */
         .sidebar-minimized .sidebar {
             padding: 45px 0 35px 0;
         }
@@ -221,9 +216,6 @@ $records = $attendanceService->getRecords('', '', $today);
             transform: rotate(180deg);
         }
 
-        /* ==========================================================================
-           MAIN CONTENT CONTAINER & METRICS ROW
-           ========================================================================== */
         .metrics-straight-row {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
@@ -248,9 +240,6 @@ $records = $attendanceService->getRecords('', '', $today);
         .card-value { font-size: 28px; font-weight: 700; color: #111827; line-height: 1.1; }
         .card-footer { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #6b7280; white-space: nowrap; border: none; background: transparent; padding: 0; }
 
-        /* ==========================================================================
-           ATTENDANCE PANEL & CONTROLS STYLES
-           ========================================================================== */
         .attendance-panel {
             background-color: #ffffff;
             border-radius: 16px;
@@ -266,9 +255,6 @@ $records = $attendanceService->getRecords('', '', $today);
         .panel-title { font-size: 18px; font-weight: 700; color: #1e293b; }
         .panel-menu-dot { color: #94a3b8; cursor: pointer; }
 
-        /* ==========================================================================
-           UPDATED CONTROL STRIP (MATCHED TO Screenshot 2026-07-06 090720.png)
-           ========================================================================== */
         .table-controls-strip { 
             display: flex; 
             justify-content: space-between; 
@@ -331,7 +317,6 @@ $records = $attendanceService->getRecords('', '', $today);
             cursor: pointer;
         }
 
-        /* UI Action Buttons (Clean & Sleek layout matching screen format) */
         .btn-action-outline {
             background-color: #ffffff;
             color: #475569;
@@ -352,7 +337,6 @@ $records = $attendanceService->getRecords('', '', $today);
             color: #1e293b;
         }
 
-        /* Custom Dropdown Styling */
         .custom-dropdown-menu {
             border-radius: 12px;
             padding: 6px;
@@ -375,9 +359,6 @@ $records = $attendanceService->getRecords('', '', $today);
             color: #1e293b;
         }
 
-        /* ==========================================================================
-           ATTENDANCE DATA TABLE
-           ========================================================================== */
         .custom-table-wrapper { overflow-x: auto; width: 100%; }
         .attendance-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
         .attendance-table th { color: #94a3b8; font-weight: 600; padding: 16px; border-bottom: 1px solid #f1f5f9; font-size: 13px; }
@@ -449,7 +430,6 @@ $records = $attendanceService->getRecords('', '', $today);
         <!-- MAIN VIEW WRAPPER -->
         <main class="main-content">
             
-            <!-- DYNAMIC METRIC CARDS OVERVIEW -->
             <div class="metrics-straight-row">
                 <div class="card">
                     <div class="card-header">
@@ -506,7 +486,6 @@ $records = $attendanceService->getRecords('', '', $today);
                     <div class="panel-menu-dot"><i class="fa-solid fa-ellipsis"></i></div>
                 </div>
 
-                <!-- TABLE CONTROLS (MATCHED EXACTLY TO THE SCREENSHOT IMAGE) -->
                 <div class="table-controls-strip">
                     <div class="filter-group-left">
                         <div class="table-search-box">
@@ -516,12 +495,10 @@ $records = $attendanceService->getRecords('', '', $today);
                     </div>
                     
                     <div class="action-group-right">
-                        <!-- FILTER TOGGLE BUTTON -->
                         <button type="button" class="btn-action-outline" id="btnFilterToggle">
                             <i class="fa-solid fa-sliders"></i> Filter
                         </button>
 
-                        <!-- EXPORT DROPDOWN SELECTION BUTTON -->
                         <div class="dropdown">
                             <button type="button" class="btn-action-outline dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" id="btnExportDropdown">
                                 <i class="fa-solid fa-download"></i> Export
@@ -542,7 +519,6 @@ $records = $attendanceService->getRecords('', '', $today);
                     </div>
                 </div>
 
-                <!-- COLLAPSIBLE FILTER PANEL DRAWER -->
                 <div class="filter-drawer" id="filterOptionsDrawer" style="display: none;">
                     <select class="select-filter-dropdown" data-filter-department>
                         <option value="">All Departments</option>
@@ -561,8 +537,10 @@ $records = $attendanceService->getRecords('', '', $today);
                                 <th style="width: 100px;"># ID <i class="fa-solid fa-sort"></i></th>
                                 <th>Name <i class="fa-solid fa-sort"></i></th>
                                 <th>Department <i class="fa-solid fa-sort"></i></th>
-                                <th>Clock-in <i class="fa-solid fa-sort"></i></th>
-                                <th>Clock-out <i class="fa-solid fa-sort"></i></th>
+                                <th>Time-in <i class="fa-solid fa-sort"></i></th>
+                                <th>Break-in <i class="fa-solid fa-sort"></i></th>
+                                <th>Break-out <i class="fa-solid fa-sort"></i></th>
+                                <th>Time-out <i class="fa-solid fa-sort"></i></th>
                                 <th>Status <i class="fa-solid fa-sort"></i></th>
                                 <th></th>
                             </tr>
@@ -570,7 +548,12 @@ $records = $attendanceService->getRecords('', '', $today);
                         <tbody id="attendance-table-body">
                             <?php if (!empty($records)): ?>
                                 <?php foreach ($records as $row): ?>
-                                    <?php $statusClass = strtolower($row['status']); if (!in_array($statusClass, ['present', 'late', 'absent'], true)) { $statusClass = 'present'; } ?>
+                                    <?php 
+                                    $statusClass = strtolower($row['status']); 
+                                    if (!in_array($statusClass, ['present', 'late', 'absent'], true)) { 
+                                        $statusClass = 'present'; 
+                                    } 
+                                    ?>
                                     <tr>
                                         <td class="id-cell">#E<?php echo (int) $row['id']; ?></td>
                                         <td>
@@ -580,14 +563,19 @@ $records = $attendanceService->getRecords('', '', $today);
                                             </div>
                                         </td>
                                         <td class="dept-cell"><?php echo htmlspecialchars($row['department']); ?></td>
+                                        
+                                        <!-- Time Logging Cells -->
                                         <td class="time-cell"><?php echo (!empty($row['time_in']) && $row['time_in'] !== '00:00:00') ? date('h:i A', strtotime($row['time_in'])) : '<span class="empty-log">--:--</span>'; ?></td>
+                                        <td class="time-cell"><?php echo (!empty($row['break_in']) && $row['break_in'] !== '00:00:00') ? date('h:i A', strtotime($row['break_in'])) : '<span class="empty-log">--:--</span>'; ?></td>
+                                        <td class="time-cell"><?php echo (!empty($row['break_out']) && $row['break_out'] !== '00:00:00') ? date('h:i A', strtotime($row['break_out'])) : '<span class="empty-log">--:--</span>'; ?></td>
                                         <td class="time-cell"><?php echo (!empty($row['time_out']) && $row['time_out'] !== '00:00:00') ? date('h:i A', strtotime($row['time_out'])) : '<span class="empty-log">--:--</span>'; ?></td>
+                                        
                                         <td><span class="status-pill <?php echo $statusClass; ?>"><?php echo htmlspecialchars($row['status']); ?></span></td>
                                         <td class="action-dot-menu"><i class="fa-solid fa-ellipsis"></i></td>
                                     </tr>
                                 <?php endforeach; ?>
                             <?php else: ?>
-                                <tr><td colspan="7" style="text-align: center; color: #94a3b8; padding: 30px;">No timekeeping records found.</td></tr>
+                                <tr><td colspan="9" style="text-align: center; color: #94a3b8; padding: 30px;">No timekeeping records found.</td></tr>
                             <?php endif; ?>
                         </tbody>
                     </table>
@@ -600,7 +588,7 @@ $records = $attendanceService->getRecords('', '', $today);
     <script src="assets/js/app.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Sidebar collapse handler
+            // Sidebar Responsive Logic
             const toggleBtn = document.getElementById('toggleSidebarBtn');
             if (toggleBtn) {
                 toggleBtn.addEventListener('click', function() {
@@ -609,7 +597,7 @@ $records = $attendanceService->getRecords('', '', $today);
                 });
             }
 
-            // Filter drawer show/hide toggle
+            // Filter Configuration Panel Toggle
             const filterToggle = document.getElementById('btnFilterToggle');
             const filterDrawer = document.getElementById('filterOptionsDrawer');
             if (filterToggle && filterDrawer) {
@@ -624,11 +612,11 @@ $records = $attendanceService->getRecords('', '', $today);
                 });
             }
 
-            // AJAX Table Filter Handlers
             const departmentFilter = document.querySelector('[data-filter-department]');
             const dateFilter = document.querySelector('[data-filter-date]');
             const searchInput = document.querySelector('[data-table-search]');
 
+            // Dynamic AJAX Row Refresher Engine
             async function loadAttendance() {
                 const payload = {
                     search: searchInput?.value.trim() || '',
@@ -647,21 +635,27 @@ $records = $attendanceService->getRecords('', '', $today);
                         if (!tbody) return;
 
                         if (!response.data || !response.data.length) {
-                            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#94a3b8; padding:30px;">No timekeeping records found.</td></tr>';
+                            tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; color:#94a3b8; padding:30px;">No timekeeping records found.</td></tr>';
                             return;
                         }
 
                         tbody.innerHTML = response.data.map((row) => {
                             let statusClass = (row.status || 'present').toLowerCase();
                             if (!['present', 'late', 'absent'].includes(statusClass)) statusClass = 'present';
+                            
                             const timeIn = row.time_in && row.time_in !== '00:00:00' ? KiwiApp.formatTime(row.time_in) : '<span class="empty-log">--:--</span>';
+                            const breakIn = row.break_in && row.break_in !== '00:00:00' ? KiwiApp.formatTime(row.break_in) : '<span class="empty-log">--:--</span>';
+                            const breakOut = row.break_out && row.break_out !== '00:00:00' ? KiwiApp.formatTime(row.break_out) : '<span class="empty-log">--:--</span>';
                             const timeOut = row.time_out && row.time_out !== '00:00:00' ? KiwiApp.formatTime(row.time_out) : '<span class="empty-log">--:--</span>';
+                            
                             return `
                                 <tr>
                                     <td class="id-cell">#E${row.id}</td>
                                     <td><div class="profile-meta-cell"><div class="avatar-image"></div><span>${KiwiApp.escapeHtml(row.employee_name)}</span></div></td>
                                     <td class="dept-cell">${KiwiApp.escapeHtml(row.department)}</td>
                                     <td class="time-cell">${timeIn}</td>
+                                    <td class="time-cell">${breakIn}</td>
+                                    <td class="time-cell">${breakOut}</td>
                                     <td class="time-cell">${timeOut}</td>
                                     <td><span class="status-pill ${statusClass}">${KiwiApp.escapeHtml(row.status)}</span></td>
                                     <td class="action-dot-menu"><i class="fa-solid fa-ellipsis"></i></td>
@@ -674,6 +668,7 @@ $records = $attendanceService->getRecords('', '', $today);
                 }
             }
 
+            // Input Debouncing Handlers
             if (typeof KiwiApp !== 'undefined' && KiwiApp.bindTableSearch) {
                 KiwiApp.bindTableSearch(loadAttendance);
             } else if (searchInput) {
@@ -687,7 +682,7 @@ $records = $attendanceService->getRecords('', '', $today);
             departmentFilter?.addEventListener('change', loadAttendance);
             dateFilter?.addEventListener('change', loadAttendance);
 
-            // Export dropdown action hooks
+            // Export Actions Mapping
             document.querySelectorAll('.dropdown-item.btn-export').forEach(button => {
                 button.addEventListener('click', function() {
                     const format = this.getAttribute('data-export-format');

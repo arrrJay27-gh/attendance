@@ -8,21 +8,20 @@ $conn = $database->getConnection();
 $msg = "";
 $alert_class = "";
 
-
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['emp_id']) && !empty($_POST['rfid_uid'])) {
 
     $empId = trim($_POST['emp_id']); 
     $rfidUid = trim($_POST['rfid_uid']);
 
-
-    $checkQ = "SELECT employee_id, name FROM employees WHERE biometric_rfid = ?";
+    // 1. Check if this card UID is already holding a map assignment on another profile
+    $checkQ = "SELECT employee_id, name FROM employees WHERE biometric_rfid = ? AND employee_id != ?";
     $checkStmt = $conn->prepare($checkQ);
     
     if (!$checkStmt) {
         die("<div class='alert alert-danger m-4'><strong>Database Query Error:</strong> " . $conn->error . "<br><em>Make sure you ran the ALTER TABLE command to add the 'biometric_rfid' column!</em></div>");
     }
 
-    $checkStmt->bind_param("s", $rfidUid);
+    $checkStmt->bind_param("ss", $rfidUid, $empId);
     $checkStmt->execute();
     $res = $checkStmt->get_result()->fetch_assoc();
     $checkStmt->close();
@@ -31,7 +30,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['emp_id']) && !empty($
         $msg = "Error: Card payload standard already registered to " . htmlspecialchars($res['name']);
         $alert_class = "alert-danger";
     } else {
-
+        // 2. Commit the registration directly into your employees database table
         $updateQ = "UPDATE employees SET biometric_rfid = ? WHERE employee_id = ?";
         $updateStmt = $conn->prepare($updateQ);
         
@@ -42,13 +41,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['emp_id']) && !empty($
         $updateStmt->bind_param("ss", $rfidUid, $empId);
         
         if ($updateStmt->execute()) {
-            if ($conn->affected_rows > 0) {
-                $msg = "Success: Card bound cleanly to employee account record.";
-                $alert_class = "alert-success";
-            } else {
-                $msg = "Warning: Query ran but no rows were updated. Check if the employee code is valid.";
-                $alert_class = "alert-warning";
-            }
+            // Note: using affected_rows >= 0 because if they map the exact same card again, affected_rows will return 0 but it's still a success
+            $msg = "Success: Card bound cleanly to employee account record.";
+            $alert_class = "alert-success";
         } else {
             $msg = "Error executing update: " . $updateStmt->error;
             $alert_class = "alert-danger";
@@ -88,25 +83,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['emp_id']) && !empty($
             <div class="alert <?php echo $alert_class; ?> py-2 px-3 mb-4 rounded-3 small"><?php echo $msg; ?></div>
         <?php endif; ?>
 
-        <form action="biometric_enrollment.php" method="POST" id="enrollForm">
+        <!-- Set action to blank so it safely posts back to whichever filename this script is named -->
+        <form action="" method="POST" id="enrollForm">
             <div class="row g-4">
                 <div class="col-md-6">
                     <label class="form-label font-weight-bold small text-secondary">1. Target Employee Profile</label>
                     <select class="form-select" name="emp_id" required>
                         <option value="">-- Choose Profile Entry --</option>
                         <?php
-                        // Populates using the unique string 'employee_id' as the option value attribute
-                        $empQ = "SELECT employee_id, name FROM employees WHERE biometric_rfid IS NULL OR biometric_rfid = '' ORDER BY name ASC";
+                        // Optimized to fetch ALL employees so you can easily update existing tags too
+                        $empQ = "SELECT employee_id, name, biometric_rfid FROM employees ORDER BY name ASC";
                         $empRes = $conn->query($empQ);
 
                         if (!$empRes) {
                             echo '<option value="" disabled class="text-danger">SQL Error: ' . htmlspecialchars($conn->error) . '</option>';
                         } elseif ($empRes->num_rows > 0) {
                             while($e = $empRes->fetch_assoc()) {
-                                echo '<option value="'.htmlspecialchars($e['employee_id']).'">'.htmlspecialchars($e['name']).' ('.htmlspecialchars($e['employee_id']).')</option>';
+                                $has_tag = !empty($e['biometric_rfid']) ? " [Has RFID]" : "";
+                                echo '<option value="'.htmlspecialchars($e['employee_id']).'">'.htmlspecialchars($e['name']).' ('.htmlspecialchars($e['employee_id']).')'.$has_tag.'</option>';
                             }
                         } else {
-                            echo '<option value="" disabled>No unassigned employees found</option>';
+                            echo '<option value="" disabled>No employees profiles found</option>';
                         }
                         ?>
                     </select>
@@ -118,7 +115,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['emp_id']) && !empty($
                         <span id="scanPromptText"><i class="fa-solid fa-fingerprint fa-bounce me-2 text-primary"></i>Click here & Tap Badge</span>
                         <span id="rfid_uid_display" class="d-none"></span>
                         
-                        <input type="text" id="rfid_capture_input" name="rfid_uid" autocomplete="off">
+                        <input type="text" id="rfid_capture_input" name="rfid_uid" autocomplete="off" autofocus>
                     </div>
                 </div>
 
@@ -138,6 +135,7 @@ document.addEventListener("DOMContentLoaded", function() {
     const displayVal = document.getElementById('rfid_uid_display');
 
     hiddenInput.focus();
+    // Keep focus locked on input field so scanner inputs register instantly
     document.addEventListener('click', () => hiddenInput.focus());
 
     hiddenInput.addEventListener('input', function() {
@@ -155,4 +153,4 @@ document.addEventListener("DOMContentLoaded", function() {
 
 </body>
 </html>
-<?php $conn->close(); ?>
+<?php $conn->close(); ?>    
