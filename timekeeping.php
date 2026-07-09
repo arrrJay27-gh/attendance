@@ -4,7 +4,7 @@ $activePage = 'timekeeping';
 
 require_once 'database.php';
 require_once 'class/Dashboard.php';
-require_once 'class/Attendance.php';
+require_once 'class/attendance.php';
 
 $database = new Database();
 $conn = $database->getConnection();
@@ -667,6 +667,10 @@ $records = $attendanceService->getRecords('', '', $today);
                     console.error("Error loading attendance data:", error);
                 }
             }
+
+            // --- REAL-TIME REFRESH ENGINE ---
+            // Set refresh interval to 500ms (0.5 seconds)[cite: 4]
+            setInterval(loadAttendance, 500);
 
             // Input Debouncing Handlers
             if (typeof KiwiApp !== 'undefined' && KiwiApp.bindTableSearch) {

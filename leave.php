@@ -1,7 +1,7 @@
 <?php
 require_once 'auth.php';
 require_once 'database.php';
-require_once 'class/Leave.php';
+require_once 'class/leave.php';
 
 $database = new Database();
 $conn = $database->getConnection();

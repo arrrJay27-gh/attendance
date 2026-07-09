@@ -4,6 +4,16 @@ header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 header("Cache-Control: post-check=0, pre-check=0", false);
 header("Pragma: no-cache");
 
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+// If the user is already logged in, skip straight to the dashboard.
+if (!empty($_SESSION['user_id'])) {
+    header('Location: index.php');
+    exit();
+}
+
 require_once 'database.php';
 
 $error = "";
@@ -17,7 +27,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $database = new Database();
         $conn = $database->getConnection();
 
-        $sql = "SELECT id, first_name, last_name, email, password FROM users WHERE email = ? LIMIT 1";
+        $sql = "SELECT id, name, email, password FROM users WHERE email = ? LIMIT 1";
         $stmt = $conn->prepare($sql);
         if ($stmt) {
             $stmt->bind_param('s', $email);
@@ -26,9 +36,20 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $user = $result ? $result->fetch_assoc() : null;
             $stmt->close();
 
-            if ($user && password_verify($password, $user['password'])) {
-                header('Location: hr_dashboard.php');
-                exit();
+            if ($user) {
+                // FIXED PASSWORD CHECK: Checks for secure PHP hash OR matching plaintext password
+                $isPasswordCorrect = password_verify($password, $user['password']) || ($password === $user['password']);
+
+                if ($isPasswordCorrect) {
+                    session_regenerate_id(true);
+
+                    $_SESSION['user_id']   = $user['id'];
+                    $_SESSION['full_name'] = $user['name']; 
+                    $_SESSION['email']     = $user['email'];
+
+                    header('Location: index.php');
+                    exit();
+                }
             }
         }
 
@@ -123,7 +144,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         }
 
         .form-input:focus {
-            border-color: #6366f1; /* Brand accent purple color match */
+            border-color: #6366f1; 
         }
 
         .password-toggle {
@@ -157,7 +178,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         .submit-btn {
             width: 100%;
             padding: 12px;
-            background-color: #6366f1; /* Matched to system accent button color */
+            background-color: #6366f1; 
             border: none;
             border-radius: 8px;
             color: #ffffff;
@@ -188,25 +209,25 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     <div class="login-card">
         <img src="img/kiwi.png" alt="Kiwi Digital Logo" class="logo-img">
         
-        <h2 class="login-title"></h2>
+        <h2 class="login-title">Kiwi Digital</h2>
         <p class="login-subtitle">We suggest using the email address you use at work.</p>
 
         <?php if(!empty($error)): ?>
             <div class="alert-danger-custom">
-                <i class="fa-solid fa-circle-exclamation me-1"></i> <?php echo $error; ?>
+                <i class="fa-solid fa-circle-exclamation me-1"></i> <?php echo htmlspecialchars($error); ?>
             </div>
         <?php endif; ?>
 
         <form action="login.php" method="POST" autocomplete="off">
             <div class="form-group">
                 <label class="form-label">Email</label>
-                <input type="email" name="email" class="form-input" placeholder="arnold@kiwidigital.com">
+                <input type="email" name="email" class="form-input" placeholder="arnold@kiwidigital.com" required>
             </div>
 
             <div class="form-group">
                 <label class="form-label">Password</label>
                 <div class="input-wrapper">
-                    <input type="password" id="passwordField" name="password" class="form-input" placeholder="kiwipass123">
+                    <input type="password" id="passwordField" name="password" class="form-input" placeholder="kiwipass123" required>
                     <i class="fa-regular fa-eye-slash password-toggle" id="togglePasswordIcon" onclick="togglePasswordVisibility()"></i>
                 </div>
                 <div class="meta-links-row">

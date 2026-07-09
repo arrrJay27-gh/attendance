@@ -3,7 +3,7 @@ require_once 'auth.php';
 $activePage = 'employee';
 require_once 'database.php';
 require_once 'class/Dashboard.php';
-require_once 'class/Employee.php';
+require_once 'class/employee.php';
 
 $database = new Database();
 $conn = $database->getConnection();

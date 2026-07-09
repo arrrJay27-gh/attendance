@@ -257,16 +257,16 @@ class Attendance {
                 $updateStmt->close();
             } else {
                 $insertSql = "INSERT INTO attendance (employee_id, name, time_in, break_in, break_out, date_record, status, created_at) 
-                              VALUES (?, ?, ?, '00:00:00', '00:00:00', ?, ?, ?)";
+                              VALUES (?, ?, ?, NULL, NULL, ?, ?, ?)";              
                 $insertStmt = $this->db->prepare($insertSql);
                 if (!$insertStmt) {
                     return ['status' => 'error', 'message' => 'Insert formulation broken: ' . $this->db->error];
                 }
+                // Notice that the bind_param types and variables remain exactly the same
                 $insertStmt->bind_param("isssss", $employee_id, $actualRealName, $time_now_formatted, $target_shift_date, $calculatedStatus, $liveTimestamp);
                 $executionSuccess = $insertStmt->execute();
                 $insertStmt->close();
             }
-            
             if ($executionSuccess) {
                 return [
                     'status' => 'success',

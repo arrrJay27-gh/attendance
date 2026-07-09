@@ -1,9 +1,9 @@
 <?php
 
 require_once __DIR__ . '/database.php';
-require_once __DIR__ . '/class/Employee.php';
-require_once __DIR__ . '/class/Attendance.php';
-require_once __DIR__ . '/class/Leave.php';
+require_once __DIR__ . '/class/employee.php';
+require_once __DIR__ . '/class/attendance.php';
+require_once __DIR__ . '/class/leave.php';
 require_once __DIR__ . '/class/ExportService.php';
 
 $db = new Database();

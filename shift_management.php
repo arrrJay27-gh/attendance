@@ -4,7 +4,7 @@ $activePage = 'shift'; // Dynamically highlights 'Shift Configuration' in the si
 
 require_once 'database.php';
 require_once 'class/Dashboard.php';
-require_once 'class/Attendance.php';
+require_once 'class/attendance.php';
 
 $database = new Database();
 $conn = $database->getConnection();
